@@ -1,21 +1,23 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { createContext, useContext } from 'react';
+import { createContext, useContext, lazy, Suspense } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DownloadsPage from './pages/DownloadsPage';
-import HowItWorksPage from './pages/HowItWorksPage';
-import DomainList from './pages/DomainList';
-import DomainDetail from './pages/DomainDetail';
-import ProfilePage from './pages/ProfilePage';
-import AdminPage from './pages/AdminPage';
-import ApiDocsPage from './pages/ApiDocsPage';
-import StatusPage from './pages/StatusPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import OnboardingPage from './pages/OnboardingPage';
+
+// Lazy-loaded pages — each becomes a separate JS chunk
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const DownloadsPage = lazy(() => import('./pages/DownloadsPage'));
+const HowItWorksPage = lazy(() => import('./pages/HowItWorksPage'));
+const DomainList = lazy(() => import('./pages/DomainList'));
+const DomainDetail = lazy(() => import('./pages/DomainDetail'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const ApiDocsPage = lazy(() => import('./pages/ApiDocsPage'));
+const StatusPage = lazy(() => import('./pages/StatusPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 
 interface ThemeContextType {
   theme: 'light' | 'dark';
@@ -90,6 +92,7 @@ export default function App() {
 
   return (
     <ThemeContext.Provider value={themeValue}>
+      <Suspense fallback={<div className="loading"><div className="loading-spinner" /><p>Loading...</p></div>}>
       <Routes>
         <Route
           path="/"
@@ -169,6 +172,7 @@ export default function App() {
           }
         />
       </Routes>
+      </Suspense>
     </ThemeContext.Provider>
   );
 }
