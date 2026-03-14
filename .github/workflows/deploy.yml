@@ -48,8 +48,11 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
             cd /opt/ddns-platform
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd --exclude=.env
             cd server && npm install && npm run build
             cd ../dashboard && npm install && npx vite build
             pm2 restart ddns-api
