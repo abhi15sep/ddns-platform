@@ -118,9 +118,27 @@ export default function DownloadsPage() {
     navigate('/login');
   }
 
+  const AppleLogo = () => (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+    </svg>
+  );
+
+  const WindowsLogo = () => (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M3 12V6.75l6-1.32v6.48L3 12zm17-9v8.75l-10 .08V5.67L20 3zm-10 9.04l10-.08V21l-10-1.39V12.04zM3 12.25l6 .09v6.33l-6-1.07V12.25z"/>
+    </svg>
+  );
+
+  const LinuxLogo = () => (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20.581 19.049c-.55-.446-.336-1.431-.907-1.917.553-3.365-.997-6.331-2.845-8.232-1.551-1.595-1.051-3.147-1.051-4.49 0-2.146-.881-4.41-3.55-4.41-2.853 0-3.635 2.38-3.663 3.738-.02 1.002-.073 1.725.62 3.265-1.597 1.984-3.108 4.636-2.764 7.834-.588.521-.341 1.484-.891 1.93-.55.448-.89.997-.89 1.614 0 1.192.982 1.619 2.187 1.619.725 0 1.519-.214 2.115-.522.455.105.93.163 1.418.163 1.037 0 2.024-.244 2.892-.684.88.457 1.88.684 2.906.684.48 0 .953-.058 1.401-.16.589.305 1.373.519 2.092.519 1.199 0 2.175-.427 2.175-1.619 0-.617-.339-1.166-.89-1.613l.245-.319zm-3.967-9.647c.387.402.753.87 1.078 1.394H6.309c.327-.525.696-.993 1.085-1.394h9.22z"/>
+    </svg>
+  );
+
   const platforms = [
     {
-      icon: '🍎',
+      icon: <AppleLogo />,
       title: 'macOS (Apple Silicon)',
       file: 'DDNS Client-1.0.0-arm64.dmg',
       href: '/downloads/DDNS Client-1.0.0-arm64.dmg',
@@ -128,7 +146,7 @@ export default function DownloadsPage() {
       badge: '.dmg',
     },
     {
-      icon: '🍎',
+      icon: <AppleLogo />,
       title: 'macOS (Intel)',
       file: 'DDNS Client-1.0.0.dmg',
       href: '/downloads/DDNS Client-1.0.0.dmg',
@@ -136,7 +154,7 @@ export default function DownloadsPage() {
       badge: '.dmg',
     },
     {
-      icon: '🪟',
+      icon: <WindowsLogo />,
       title: 'Windows',
       file: 'DDNS Client Setup 1.0.0.exe',
       href: '/downloads/DDNS Client Setup 1.0.0.exe',
@@ -144,7 +162,7 @@ export default function DownloadsPage() {
       badge: '.exe',
     },
     {
-      icon: '🐧',
+      icon: <LinuxLogo />,
       title: 'Debian / Ubuntu',
       file: 'ddns-client_1.0.0_amd64.deb',
       href: '/downloads/ddns-client_1.0.0_amd64.deb',
@@ -152,7 +170,7 @@ export default function DownloadsPage() {
       badge: '.deb',
     },
     {
-      icon: '📦',
+      icon: <LinuxLogo />,
       title: 'Universal Linux',
       file: 'DDNS Client-1.0.0.AppImage',
       href: '/downloads/DDNS Client-1.0.0.AppImage',

@@ -1551,6 +1551,10 @@ section {
 .dl-platform-icon {
   font-size: 2rem;
   margin-bottom: 0.25rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .dl-platform-badge {
   background: var(--accent-bg);
