@@ -6,10 +6,10 @@ import { updateDNSRecord } from '../powerdns.js';
 const router = Router();
 
 const limiter = rateLimit({
-  windowMs: 30_000,
-  max: 1,
+  windowMs: 60_000,
+  max: 6,
   keyGenerator: (req: Request) => (req.query.token as string) || req.ip || '',
-  message: 'KO - rate limited, try again in 30 seconds',
+  message: 'KO - rate limited, try again in 60 seconds',
 });
 
 const IPV4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
