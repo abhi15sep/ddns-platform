@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { ThemeToggleButton } from '../App';
 
 export default function HowItWorksPage() {
   const { user, logout } = useAuth();
@@ -11,7 +12,7 @@ export default function HowItWorksPage() {
   }
 
   return (
-    <div style={{ background: '#f8fafc', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg-body)', minHeight: '100vh' }}>
       {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-inner">
@@ -33,9 +34,10 @@ export default function HowItWorksPage() {
             </Link>
           </div>
           <div className="navbar-right">
+            <ThemeToggleButton />
             {user ? (
               <>
-                <span className="navbar-email">{user.email}</span>
+                <Link to="/profile" className="navbar-email" style={{ cursor: 'pointer', color: 'var(--accent-text)' }}>{user.email}</Link>
                 <button onClick={handleLogout} className="btn btn-secondary btn-sm">
                   Logout
                 </button>
@@ -213,7 +215,7 @@ export default function HowItWorksPage() {
                 <div style={styles.deviceBox}>
                   <span style={styles.deviceIcon}>📡</span>
                   <span style={styles.deviceLabel}>Router</span>
-                  <span style={{...styles.deviceSub, color: '#dc2626'}}>New IP: 203.0.113.77</span>
+                  <span style={{...styles.deviceSub, color: 'var(--badge-never-text)'}}>New IP: 203.0.113.77</span>
                 </div>
                 <div style={styles.arrow}>→</div>
                 <div style={{...styles.deviceBox, ...styles.serverBox}}>
@@ -254,7 +256,7 @@ export default function HowItWorksPage() {
                 <div style={styles.deviceBox}>
                   <span style={styles.deviceIcon}>🏠</span>
                   <span style={styles.deviceLabel}>Your Home</span>
-                  <span style={{...styles.deviceSub, color: '#059669'}}>Connected!</span>
+                  <span style={{...styles.deviceSub, color: 'var(--badge-active-text)'}}>Connected!</span>
                 </div>
               </div>
             </div>
@@ -479,7 +481,7 @@ export default function HowItWorksPage() {
 
           {/* Common Ports Table */}
           <div style={{ marginTop: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.75rem' }}>Common ports to forward</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.75rem' }}>Common ports to forward</h3>
             <div style={{ overflowX: 'auto' }}>
               <table className="domain-table" style={{ minWidth: '500px' }}>
                 <thead>
@@ -512,8 +514,8 @@ export default function HowItWorksPage() {
 
           {/* How to set up port forwarding */}
           <div style={{ marginTop: '1.5rem', background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.5rem' }}>How to set up port forwarding</h3>
-            <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6, marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.5rem' }}>How to set up port forwarding</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1rem' }}>
               Every router is different, but the general steps are:
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -524,14 +526,14 @@ export default function HowItWorksPage() {
                 { num: '4', text: 'Save and test from outside your network (e.g. using mobile data)' },
               ].map((step) => (
                 <div key={step.num} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                  <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>{step.num}</span>
-                  <span style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.5 }}>{step.text}</span>
+                  <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-bg)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>{step.num}</span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{step.text}</span>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.6, marginTop: '1rem' }}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: '1rem' }}>
               Need help finding the port forwarding page on your specific router?{' '}
-              <a href="https://portforward.com/router.htm" target="_blank" rel="noreferrer" style={{ color: '#4f46e5', fontWeight: 600 }}>
+              <a href="https://portforward.com/router.htm" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-text)', fontWeight: 600 }}>
                 portforward.com
               </a>{' '}
               has step-by-step guides with screenshots for <strong>hundreds of router models</strong> — just find your brand and model.
@@ -575,12 +577,12 @@ const styles: Record<string, React.CSSProperties> = {
   heroSub: { fontSize: '1.1rem', opacity: 0.9, maxWidth: '600px', margin: '0 auto' },
 
   section: { marginBottom: '3rem' },
-  sectionTitle: { fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.75rem' },
-  sectionDesc: { fontSize: '1rem', color: '#475569', lineHeight: 1.7, maxWidth: '750px' },
+  sectionTitle: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-heading)', marginBottom: '0.75rem' },
+  sectionDesc: { fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '750px' },
 
   code: {
-    background: '#eef2ff',
-    color: '#4f46e5',
+    background: 'var(--accent-bg)',
+    color: 'var(--accent-text)',
     padding: '0.15rem 0.4rem',
     borderRadius: '4px',
     fontFamily: "'SF Mono', 'Fira Code', monospace",
@@ -590,19 +592,20 @@ const styles: Record<string, React.CSSProperties> = {
   // Flow diagram
   flowContainer: { display: 'flex', flexDirection: 'column' as const, gap: '0' },
   flowStep: {
-    background: 'white',
+    background: 'var(--bg-card)',
     borderRadius: '12px',
     padding: '1.5rem',
     marginBottom: '1rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-    border: '1px solid #f1f5f9',
-    borderLeft: '4px solid #4f46e5',
+    boxShadow: '0 1px 3px var(--shadow-sm)',
+    border: '1px solid var(--border-light)',
+    borderLeft: '4px solid var(--accent)',
+    transition: 'background 0.2s, border-color 0.2s',
   },
   flowNumber: {
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    background: '#4f46e5',
+    background: 'var(--accent)',
     color: 'white',
     display: 'inline-flex',
     alignItems: 'center',
@@ -612,8 +615,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '0.75rem',
   },
   flowContent: { marginBottom: '1rem' },
-  flowTitle: { fontSize: '1.05rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.35rem' },
-  flowDesc: { fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6 },
+  flowTitle: { fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.35rem' },
+  flowDesc: { fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 },
 
   flowDiagram: {
     display: 'flex',
@@ -621,7 +624,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     gap: '0.75rem',
     padding: '1rem',
-    background: '#f8fafc',
+    background: 'var(--bg-secondary)',
     borderRadius: '8px',
     flexWrap: 'wrap' as const,
   },
@@ -631,30 +634,32 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '0.25rem',
     padding: '0.75rem 1rem',
-    background: 'white',
+    background: 'var(--bg-card)',
     borderRadius: '10px',
-    border: '2px solid #e2e8f0',
+    border: '2px solid var(--border-default)',
     minWidth: '100px',
+    transition: 'background 0.2s, border-color 0.2s',
   },
-  serverBox: { borderColor: '#4f46e5', background: '#eef2ff' },
-  dnsBox: { borderColor: '#059669', background: '#ecfdf5' },
+  serverBox: { borderColor: 'var(--accent)', background: 'var(--accent-bg)' },
+  dnsBox: { borderColor: '#059669', background: 'var(--badge-active-bg)' },
   deviceIcon: { fontSize: '1.5rem' },
-  deviceLabel: { fontSize: '0.75rem', fontWeight: 600, color: '#1e293b' },
-  deviceSub: { fontSize: '0.65rem', color: '#64748b', textAlign: 'center' as const },
-  arrow: { fontSize: '1.5rem', color: '#94a3b8', fontWeight: 700 },
+  deviceLabel: { fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-heading)' },
+  deviceSub: { fontSize: '0.65rem', color: 'var(--text-secondary)', textAlign: 'center' as const },
+  arrow: { fontSize: '1.5rem', color: 'var(--text-muted)', fontWeight: 700 },
 
   // Use cases
   useCaseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' },
   useCaseCard: {
-    background: 'white',
+    background: 'var(--bg-card)',
     borderRadius: '10px',
     padding: '1.25rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px var(--shadow-sm)',
+    border: '1px solid var(--border-light)',
+    transition: 'background 0.2s, border-color 0.2s',
   },
   useCaseIcon: { fontSize: '1.5rem', marginBottom: '0.5rem', display: 'block' },
-  useCaseTitle: { fontSize: '0.95rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.35rem' },
-  useCaseDesc: { fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 },
+  useCaseTitle: { fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.35rem' },
+  useCaseDesc: { fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 },
 
   // Quick start
   quickSteps: { display: 'flex', flexDirection: 'column' as const, gap: '1rem' },
@@ -662,17 +667,18 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '1rem',
-    background: 'white',
+    background: 'var(--bg-card)',
     padding: '1.25rem',
     borderRadius: '10px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px var(--shadow-sm)',
+    border: '1px solid var(--border-light)',
+    transition: 'background 0.2s, border-color 0.2s',
   },
   quickStepNum: {
     width: '36px',
     height: '36px',
     borderRadius: '50%',
-    background: '#4f46e5',
+    background: 'var(--accent)',
     color: 'white',
     display: 'flex',
     alignItems: 'center',
@@ -680,21 +686,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     flexShrink: 0,
   },
-  quickStepDesc: { fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem', lineHeight: 1.5 },
+  quickStepDesc: { fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.5 },
 
   // Note box
   noteBox: {
-    background: '#fffbeb',
-    border: '1px solid #fde68a',
-    borderLeft: '4px solid #f59e0b',
+    background: 'var(--badge-stale-bg)',
+    border: '1px solid var(--badge-stale-text)',
+    borderLeft: '4px solid var(--badge-stale-text)',
     borderRadius: '8px',
     padding: '1.25rem 1.5rem',
   },
-  noteTitle: { fontSize: '1rem', fontWeight: 600, color: '#92400e', marginBottom: '0.5rem' },
-  noteDesc: { fontSize: '0.9rem', color: '#78350f', lineHeight: 1.6, marginBottom: '0.5rem' },
+  noteTitle: { fontSize: '1rem', fontWeight: 600, color: 'var(--badge-stale-text)', marginBottom: '0.5rem' },
+  noteDesc: { fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '0.5rem' },
 
   // CTA
   ctaSection: { textAlign: 'center' as const, padding: '2rem 0 3rem' },
-  ctaTitle: { fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' },
-  ctaDesc: { fontSize: '1rem', color: '#64748b', marginBottom: '1.25rem' },
+  ctaTitle: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-heading)', marginBottom: '0.5rem' },
+  ctaDesc: { fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' },
 };

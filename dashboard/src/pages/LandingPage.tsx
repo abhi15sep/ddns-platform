@@ -1,5 +1,6 @@
 import { useEffect, useState, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+import { ThemeToggleButton } from '../App';
 
 /* ---------- tiny helpers ---------- */
 const TERMINAL_LINES = [
@@ -120,13 +121,13 @@ function IconPlug() {
 
 /* ---------- check / cross for table ---------- */
 function Check() {
-  return <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.1rem' }}>Yes</span>;
+  return <span style={{ color: 'var(--badge-active-text)', fontWeight: 700, fontSize: '1.1rem' }}>Yes</span>;
 }
 function Cross() {
-  return <span style={{ color: '#dc2626', fontWeight: 700, fontSize: '1.1rem' }}>No</span>;
+  return <span style={{ color: 'var(--badge-never-text)', fontWeight: 700, fontSize: '1.1rem' }}>No</span>;
 }
 function Free() {
-  return <span style={{ color: '#16a34a', fontWeight: 700 }}>Free</span>;
+  return <span style={{ color: 'var(--badge-active-text)', fontWeight: 700 }}>Free</span>;
 }
 
 /* ---------- main component ---------- */
@@ -144,6 +145,7 @@ export default function LandingPage() {
             <a href="#how-it-works" style={styles.navLink}>How It Works</a>
             <a href="#compare" style={styles.navLink}>Compare</a>
             <Link to="/login" style={styles.navLink}>Sign In</Link>
+            <ThemeToggleButton />
             <Link to="/register" style={styles.navCta}>Get Started</Link>
           </div>
         </div>
@@ -245,7 +247,7 @@ export default function LandingPage() {
                 {([
                   ['Price', <Free key="f1" />, <Free key="f2" />, <Free key="f3" />],
                   ['Domain Limit', '5 subdomains', '1 hostname', 'Unlimited'],
-                  ['Monthly Confirmation', <Cross key="c1" />, <span key="s1" style={{ color: '#dc2626', fontWeight: 700 }}>Required</span>, <Cross key="c2" />],
+                  ['Monthly Confirmation', <Cross key="c1" />, <span key="s1" style={{ color: 'var(--badge-never-text)', fontWeight: 700 }}>Required</span>, <Cross key="c2" />],
                   ['IP Change History', <Cross key="c3" />, <Cross key="c4" />, <Check key="k1" />],
                   ['Desktop App', <Cross key="c5" />, <Check key="k2" />, <Check key="k3" />],
                   ['Open Source', <Check key="k4" />, <Cross key="c6" />, <Check key="k5" />],
@@ -332,10 +334,11 @@ export default function LandingPage() {
 /* ---------- styles ---------- */
 const styles: Record<string, CSSProperties> = {
   page: {
-    background: '#ffffff',
-    color: '#1a1a2e',
+    background: 'var(--bg-body)',
+    color: 'var(--text-primary)',
     minHeight: '100vh',
     overflowX: 'hidden',
+    transition: 'background 0.2s, color 0.2s',
   },
 
   /* NAV */
@@ -343,9 +346,10 @@ const styles: Record<string, CSSProperties> = {
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    background: 'rgba(255,255,255,0.92)',
+    background: 'var(--bg-card)',
     backdropFilter: 'blur(12px)',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid var(--border-default)',
+    transition: 'background 0.2s, border-color 0.2s',
   },
   navInner: {
     maxWidth: 1200,
@@ -358,14 +362,14 @@ const styles: Record<string, CSSProperties> = {
   logo: {
     fontSize: '1.15rem',
     fontWeight: 700,
-    color: '#1a1a2e',
+    color: 'var(--text-primary)',
     textDecoration: 'none',
     display: 'flex',
     alignItems: 'center',
     gap: '0.35rem',
   },
   logoIcon: {
-    color: '#4f46e5',
+    color: 'var(--accent-text)',
     fontSize: '1.3rem',
   },
   navLinks: {
@@ -375,13 +379,13 @@ const styles: Record<string, CSSProperties> = {
     flexWrap: 'wrap' as const,
   },
   navLink: {
-    color: '#4b5563',
+    color: 'var(--text-secondary)',
     textDecoration: 'none',
     fontSize: '0.9rem',
     fontWeight: 500,
   },
   navCta: {
-    background: '#4f46e5',
+    background: 'var(--accent)',
     color: '#fff',
     padding: '0.5rem 1.15rem',
     borderRadius: 8,
@@ -503,12 +507,14 @@ const styles: Record<string, CSSProperties> = {
 
   /* SECTIONS */
   sectionLight: {
-    background: '#f8fafc',
+    background: 'var(--bg-secondary)',
     padding: '5rem 1.5rem',
+    transition: 'background 0.2s',
   },
   sectionWhite: {
-    background: '#ffffff',
+    background: 'var(--bg-card)',
     padding: '5rem 1.5rem',
+    transition: 'background 0.2s',
   },
   sectionInner: {
     maxWidth: 1200,
@@ -519,11 +525,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
     fontWeight: 800,
     marginBottom: '0.5rem',
-    color: '#1a1a2e',
+    color: 'var(--text-heading)',
   },
   sectionSub: {
     textAlign: 'center' as const,
-    color: '#6b7280',
+    color: 'var(--text-secondary)',
     fontSize: '1.05rem',
     marginBottom: '3rem',
     maxWidth: 600,
@@ -541,11 +547,13 @@ const styles: Record<string, CSSProperties> = {
   stepCard: {
     flex: '1 1 260px',
     maxWidth: 340,
-    background: '#ffffff',
+    background: 'var(--bg-card)',
     borderRadius: 16,
     padding: '2rem',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    boxShadow: '0 1px 4px var(--shadow-sm)',
     textAlign: 'center' as const,
+    border: '1px solid var(--border-light)',
+    transition: 'background 0.2s, border-color 0.2s',
   },
   stepNum: {
     width: 48,
@@ -564,10 +572,10 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '1.1rem',
     fontWeight: 700,
     marginBottom: '0.5rem',
-    color: '#1a1a2e',
+    color: 'var(--text-heading)',
   },
   stepDesc: {
-    color: '#6b7280',
+    color: 'var(--text-secondary)',
     fontSize: '0.95rem',
     lineHeight: 1.6,
   },
@@ -579,11 +587,11 @@ const styles: Record<string, CSSProperties> = {
     gap: '1.5rem',
   },
   featureCard: {
-    background: '#f8fafc',
+    background: 'var(--bg-secondary)',
     borderRadius: 14,
     padding: '1.75rem',
-    border: '1px solid #e5e7eb',
-    transition: 'box-shadow 0.2s, transform 0.2s',
+    border: '1px solid var(--border-default)',
+    transition: 'box-shadow 0.2s, transform 0.2s, background 0.2s',
   },
   featureIcon: {
     marginBottom: '0.75rem',
@@ -592,10 +600,10 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '1.05rem',
     fontWeight: 700,
     marginBottom: '0.4rem',
-    color: '#1a1a2e',
+    color: 'var(--text-heading)',
   },
   featureDesc: {
-    color: '#6b7280',
+    color: 'var(--text-secondary)',
     fontSize: '0.93rem',
     lineHeight: 1.6,
   },
@@ -607,11 +615,13 @@ const styles: Record<string, CSSProperties> = {
   table: {
     width: '100%',
     borderCollapse: 'collapse' as const,
-    background: '#ffffff',
+    background: 'var(--bg-card)',
     borderRadius: 12,
     overflow: 'hidden',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+    boxShadow: '0 1px 4px var(--shadow-sm)',
     minWidth: 600,
+    border: '1px solid var(--border-light)',
+    transition: 'background 0.2s',
   },
   th: {
     padding: '1rem 1.25rem',
@@ -619,35 +629,35 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '0.8rem',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
-    color: '#6b7280',
-    background: '#f9fafb',
-    borderBottom: '2px solid #e5e7eb',
+    color: 'var(--text-muted)',
+    background: 'var(--table-header-bg)',
+    borderBottom: '2px solid var(--border-default)',
     fontWeight: 600,
   },
   thHighlight: {
-    background: '#eef2ff',
-    color: '#4f46e5',
+    background: 'var(--accent-bg)',
+    color: 'var(--accent-text)',
   },
   td: {
     padding: '0.85rem 1.25rem',
-    borderBottom: '1px solid #f3f4f6',
+    borderBottom: '1px solid var(--table-border)',
     fontSize: '0.93rem',
-    color: '#374151',
+    color: 'var(--text-primary)',
     textAlign: 'center' as const,
   },
   tdLabel: {
     padding: '0.85rem 1.25rem',
-    borderBottom: '1px solid #f3f4f6',
+    borderBottom: '1px solid var(--table-border)',
     fontSize: '0.93rem',
     fontWeight: 600,
-    color: '#1a1a2e',
+    color: 'var(--text-heading)',
     textAlign: 'left' as const,
   },
   tdHighlight: {
-    background: '#faf5ff08',
+    background: 'var(--accent-bg)',
   },
   trEven: {
-    background: '#fafbfc',
+    background: 'var(--table-even-bg)',
   },
 
   /* USE CASES */
@@ -660,11 +670,12 @@ const styles: Record<string, CSSProperties> = {
   useCaseCard: {
     flex: '1 1 200px',
     maxWidth: 220,
-    background: '#f8fafc',
+    background: 'var(--bg-secondary)',
     borderRadius: 14,
     padding: '1.5rem 1.25rem',
     textAlign: 'center' as const,
-    border: '1px solid #e5e7eb',
+    border: '1px solid var(--border-default)',
+    transition: 'background 0.2s, border-color 0.2s',
   },
   useCaseEmoji: {
     fontSize: '2rem',
@@ -674,10 +685,10 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '0.95rem',
     fontWeight: 700,
     marginBottom: '0.35rem',
-    color: '#1a1a2e',
+    color: 'var(--text-heading)',
   },
   useCaseDesc: {
-    color: '#6b7280',
+    color: 'var(--text-secondary)',
     fontSize: '0.85rem',
     lineHeight: 1.55,
   },
@@ -779,3 +790,5 @@ const styles: Record<string, CSSProperties> = {
     textAlign: 'center' as const,
   },
 };
+
+/* Note: Footer keeps dark colors intentionally — it's always dark regardless of theme */

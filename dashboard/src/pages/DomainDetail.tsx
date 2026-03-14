@@ -110,7 +110,7 @@ export default function DomainDetail() {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>
         <div className="loading-spinner" />
-        <p style={{ color: '#94a3b8' }}>Loading domain details...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Loading domain details...</p>
       </div>
     );
   }
@@ -298,7 +298,7 @@ export default function DomainDetail() {
             </div>
 
             <div style={{ marginTop: '1rem' }}>
-              <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 Want automatic updates without cron?{' '}
                 <a href="/downloads">Download the Desktop App</a> for a
                 graphical setup wizard.
@@ -490,7 +490,7 @@ export default function DomainDetail() {
             </div>
 
             <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
                 Prefer a GUI? Download the DDNS Desktop App for automatic updates.
               </p>
               <a href="/downloads" className="btn btn-primary">

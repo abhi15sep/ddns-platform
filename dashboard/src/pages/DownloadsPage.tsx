@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { ThemeToggleButton } from '../App';
 
 type TabKey = 'linux' | 'windows' | 'docker' | 'synology' | 'router' | 'rpi';
 
@@ -184,9 +185,10 @@ export default function DownloadsPage() {
             </Link>
           </div>
           <div className="navbar-right">
+            <ThemeToggleButton />
             {user ? (
               <>
-                <span className="navbar-email">{user.email}</span>
+                <Link to="/profile" className="navbar-email" style={{ cursor: 'pointer', color: 'var(--accent-text)' }}>{user.email}</Link>
                 <button onClick={handleLogout} className="btn btn-secondary btn-sm">
                   Logout
                 </button>

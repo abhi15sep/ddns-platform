@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getDomains, createDomain, deleteDomain } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { ThemeToggleButton } from '../App';
 
 interface Domain {
   id: string;
@@ -141,7 +142,10 @@ export default function DomainList() {
             </Link>
           </div>
           <div className="navbar-right">
-            <span className="navbar-email">{user?.email}</span>
+            <Link to="/profile" className="navbar-email" style={{ cursor: 'pointer', color: 'var(--accent-text)' }}>
+              {user?.email}
+            </Link>
+            <ThemeToggleButton />
             <button onClick={handleLogout} className="btn btn-secondary btn-sm">
               Logout
             </button>
@@ -231,7 +235,7 @@ export default function DomainList() {
             <div className="code-block" style={{ marginTop: '0.5rem' }}>
               <code>curl "https://api.devops-monk.com/update?domain=YOUR_SUBDOMAIN&token=YOUR_TOKEN"</code>
             </div>
-            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               Click the link icon on any domain below to copy its curl command, or click the domain name for full setup guides.
             </span>
           </div>

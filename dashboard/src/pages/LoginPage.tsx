@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../api/client';
+import { ThemeToggleButton } from '../App';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,6 +22,9 @@ export default function LoginPage() {
 
   return (
     <div className="auth-container">
+      <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+        <ThemeToggleButton />
+      </div>
       <div className="auth-card">
         <h1>Sign in to DDNS</h1>
 
