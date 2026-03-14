@@ -34,6 +34,7 @@ interface HistoryEntry {
 }
 
 type TabName = 'update' | 'history' | 'setup' | 'notifications';
+type SetupPlatform = 'linux' | 'macos' | 'windows' | 'docker' | 'rpi';
 
 interface Toast {
   id: number;
@@ -79,6 +80,7 @@ export default function DomainDetail() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookSaving, setWebhookSaving] = useState(false);
+  const [setupPlatform, setSetupPlatform] = useState<SetupPlatform>('linux');
 
   const addToast = useCallback((message: string, type: 'success' | 'error') => {
     const id = ++toastIdCounter;
@@ -585,105 +587,420 @@ export default function DomainDetail() {
         {/* Setup Guide Tab */}
         {activeTab === 'setup' && (
           <section>
-            <div className="setup-grid">
-              <div className="setup-card">
-                <h4>Linux (Cron)</h4>
-                <p>Add to crontab with <code>crontab -e</code>:</p>
-                <div className="code-block">
-                  <code>{`*/5 * * * * curl -s "${updateURL}" > /dev/null`}</code>
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `*/5 * * * * curl -s "${updateURL}" > /dev/null`,
-                        'Cron command'
-                      )
-                    }
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Copy
-                  </button>
-                </div>
+            {/* Desktop App CTA */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '1rem 1.25rem',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
+              borderRadius: '10px',
+              marginBottom: '1.5rem',
+              boxShadow: '0 1px 3px var(--shadow-md)',
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: '10px',
+                background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
               </div>
-
-              <div className="setup-card">
-                <h4>Windows (PowerShell)</h4>
-                <p>Create a Scheduled Task or run in PowerShell:</p>
-                <div className="code-block">
-                  <code>{`Invoke-WebRequest -Uri "${updateURL}"`}</code>
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `Invoke-WebRequest -Uri "${updateURL}"`,
-                        'PowerShell command'
-                      )
-                    }
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Copy
-                  </button>
-                </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-heading)', fontSize: '0.9rem' }}>Prefer a GUI?</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Download the Desktop App for automatic updates — no terminal needed.</div>
               </div>
-
-              <div className="setup-card">
-                <h4>macOS (launchd)</h4>
-                <p>
-                  Save as <code>~/Library/LaunchAgents/com.ddns.update.plist</code>:
-                </p>
-                <div className="code-block">
-                  <code style={{ fontSize: '0.68rem' }}>
-                    {`curl -s "${updateURL}" > /dev/null`}
-                  </code>
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>com.ddns.update</string>
-  <key>ProgramArguments</key>
-  <array><string>curl</string><string>-s</string><string>${updateURL}</string></array>
-  <key>StartInterval</key><integer>300</integer>
-</dict>
-</plist>`,
-                        'launchd plist'
-                      )
-                    }
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-
-              <div className="setup-card">
-                <h4>Docker</h4>
-                <p>Use a lightweight container with curl:</p>
-                <div className="code-block">
-                  <code>{`docker run -d --restart=always alpine/curl \\
-  sh -c "while true; do curl -s '${updateURL}'; sleep 300; done"`}</code>
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `docker run -d --restart=always alpine/curl sh -c "while true; do curl -s '${updateURL}'; sleep 300; done"`,
-                        'Docker command'
-                      )
-                    }
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
+              <a href="/downloads" className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
+                Download App
+              </a>
             </div>
 
-            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                Prefer a GUI? Download the DDNS Desktop App for automatic updates.
-              </p>
-              <a href="/downloads" className="btn btn-primary">
-                Download Desktop App
-              </a>
+            {/* Platform Selector */}
+            <div className="section-label">Script-Based Setup</div>
+            <div style={{
+              display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap',
+            }}>
+              {([
+                { key: 'linux' as SetupPlatform, label: 'Linux', icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+                  </svg>
+                )},
+                { key: 'macos' as SetupPlatform, label: 'macOS', icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a8.4 8.4 0 00-2.3 6.4 4.2 4.2 0 003 4.2 4.8 4.8 0 01-1.5 3.4c-.8 1-1.7 2-3.2 2s-2.2-.6-3.4-.6-2.2.6-3.6.6" />
+                    <rect x="4" y="3" width="16" height="18" rx="2" />
+                  </svg>
+                )},
+                { key: 'windows' as SetupPlatform, label: 'Windows', icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                  </svg>
+                )},
+                { key: 'docker' as SetupPlatform, label: 'Docker', icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 12.5c-.5-1-1.5-1.5-2.5-1.5h-.5v-2h-3v2h-2v-2h-3v2h-2v-3h-3v3h-.5C3 11 2 12 2 13.5S3.5 16 5 16h14c1.5 0 3-1.5 3-3.5z" />
+                  </svg>
+                )},
+                { key: 'rpi' as SetupPlatform, label: 'Raspberry Pi', icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="2" /><circle cx="9" cy="9" r="1" /><circle cx="15" cy="9" r="1" /><path d="M9 15h6" />
+                  </svg>
+                )},
+              ]).map(({ key, label, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setSetupPlatform(key)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                    padding: '0.5rem 0.85rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 500,
+                    border: setupPlatform === key ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-light)',
+                    background: setupPlatform === key ? 'var(--accent-muted)' : 'var(--bg-card)',
+                    color: setupPlatform === key ? 'var(--accent-text)' : 'var(--text-secondary)',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Platform Content */}
+            <div style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+              borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 3px var(--shadow-md)',
+            }}>
+              {/* Linux */}
+              {setupPlatform === 'linux' && (
+                <div style={{ padding: '1.5rem' }}>
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-heading)', marginBottom: '0.25rem' }}>Linux — Cron Job</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    Updates your IP every 5 minutes using cron. Works on Ubuntu, Debian, Fedora, Arch, and any Linux distro.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>1</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Open your crontab</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>crontab -e</code>
+                          <button onClick={() => copyToClipboard('crontab -e', 'Command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>2</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Add this line at the bottom of the file</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>{`*/5 * * * * curl -s "${updateURL}" > /dev/null`}</code>
+                          <button onClick={() => copyToClipboard(`*/5 * * * * curl -s "${updateURL}" > /dev/null`, 'Cron line')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>3</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Save and exit</div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                          Press <code>Ctrl+X</code>, then <code>Y</code>, then <code>Enter</code> (for nano). The cron job is now active and will run every 5 minutes.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-secondary)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Verify it works</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>{`curl -s "${updateURL}"`}</code>
+                          <button onClick={() => copyToClipboard(`curl -s "${updateURL}"`, 'Test command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.35rem 0 0 0' }}>
+                          Should return <code>OK</code>. Check back on the IP History tab to confirm.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* macOS */}
+              {setupPlatform === 'macos' && (
+                <div style={{ padding: '1.5rem' }}>
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-heading)', marginBottom: '0.25rem' }}>macOS — launchd</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    The recommended way on macOS. Runs as a background agent — survives reboots and resumes after sleep.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>1</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Create the plist file</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>{`nano ~/Library/LaunchAgents/com.ddns.update.plist`}</code>
+                          <button onClick={() => copyToClipboard(`nano ~/Library/LaunchAgents/com.ddns.update.plist`, 'Command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>2</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Paste this content and save</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code style={{ fontSize: '0.68rem', whiteSpace: 'pre' }}>{`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ddns.update</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>curl</string>
+    <string>-s</string>
+    <string>${updateURL}</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>300</integer>
+</dict>
+</plist>`}</code>
+                          <button onClick={() => copyToClipboard(`<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"\n  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n  <key>Label</key>\n  <string>com.ddns.update</string>\n  <key>ProgramArguments</key>\n  <array>\n    <string>curl</string>\n    <string>-s</string>\n    <string>${updateURL}</string>\n  </array>\n  <key>StartInterval</key>\n  <integer>300</integer>\n</dict>\n</plist>`, 'Plist content')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>3</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Load the agent</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>launchctl load ~/Library/LaunchAgents/com.ddns.update.plist</code>
+                          <button onClick={() => copyToClipboard('launchctl load ~/Library/LaunchAgents/com.ddns.update.plist', 'Load command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.35rem 0 0 0' }}>
+                          To stop: <code>launchctl unload ~/Library/LaunchAgents/com.ddns.update.plist</code>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-secondary)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Verify it works</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>{`curl -s "${updateURL}"`}</code>
+                          <button onClick={() => copyToClipboard(`curl -s "${updateURL}"`, 'Test command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Windows */}
+              {setupPlatform === 'windows' && (
+                <div style={{ padding: '1.5rem' }}>
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-heading)', marginBottom: '0.25rem' }}>Windows — Task Scheduler + PowerShell</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    Creates a scheduled task that runs every 5 minutes in the background. No extra software required.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>1</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Open PowerShell as Administrator</div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                          Right-click the Start menu → <strong>Terminal (Admin)</strong> or search for "PowerShell" and select "Run as administrator".
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>2</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Create the scheduled task</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code style={{ fontSize: '0.7rem', whiteSpace: 'pre-wrap' }}>{`$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -Command Invoke-WebRequest -Uri '${updateURL}'"
+$trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -Once -At (Get-Date)
+Register-ScheduledTask -TaskName "DDNS-Update" -Action $action -Trigger $trigger -RunLevel Highest`}</code>
+                          <button onClick={() => copyToClipboard(`$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -Command Invoke-WebRequest -Uri '${updateURL}'"\n$trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -Once -At (Get-Date)\nRegister-ScheduledTask -TaskName "DDNS-Update" -Action $action -Trigger $trigger -RunLevel Highest`, 'PowerShell script')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-secondary)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Test it manually</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>{`Invoke-WebRequest -Uri "${updateURL}"`}</code>
+                          <button onClick={() => copyToClipboard(`Invoke-WebRequest -Uri "${updateURL}"`, 'PowerShell command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.35rem 0 0 0' }}>
+                          To remove: <code>Unregister-ScheduledTask -TaskName "DDNS-Update" -Confirm:$false</code>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Docker */}
+              {setupPlatform === 'docker' && (
+                <div style={{ padding: '1.5rem' }}>
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-heading)', marginBottom: '0.25rem' }}>Docker — Container</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    Run a tiny sidecar container that updates your IP. Perfect for servers and NAS devices already running Docker.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>1</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Option A: One-liner (docker run)</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code style={{ fontSize: '0.72rem', whiteSpace: 'pre-wrap' }}>{`docker run -d --name ddns-updater --restart=always alpine/curl sh -c "while true; do curl -s '${updateURL}'; sleep 300; done"`}</code>
+                          <button onClick={() => copyToClipboard(`docker run -d --name ddns-updater --restart=always alpine/curl sh -c "while true; do curl -s '${updateURL}'; sleep 300; done"`, 'Docker command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>2</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Option B: Docker Compose</div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.35rem' }}>Add to your <code>docker-compose.yml</code>:</p>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code style={{ fontSize: '0.72rem', whiteSpace: 'pre' }}>{`services:
+  ddns-updater:
+    image: alpine/curl
+    restart: always
+    command: >
+      sh -c "while true; do
+        curl -s '${updateURL}';
+        sleep 300;
+      done"`}</code>
+                          <button onClick={() => copyToClipboard(`services:\n  ddns-updater:\n    image: alpine/curl\n    restart: always\n    command: >\n      sh -c "while true; do\n        curl -s '${updateURL}';\n        sleep 300;\n      done"`, 'Docker Compose')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-secondary)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Check logs</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>docker logs ddns-updater</code>
+                          <button onClick={() => copyToClipboard('docker logs ddns-updater', 'Command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Raspberry Pi */}
+              {setupPlatform === 'rpi' && (
+                <div style={{ padding: '1.5rem' }}>
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-heading)', marginBottom: '0.25rem' }}>Raspberry Pi — Cron + systemd</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    Ideal for always-on home servers. Uses cron just like Linux — your Pi keeps your DNS up to date 24/7.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>1</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>SSH into your Raspberry Pi</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>ssh pi@raspberrypi.local</code>
+                          <button onClick={() => copyToClipboard('ssh pi@raspberrypi.local', 'SSH command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>2</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Make sure curl is installed</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>sudo apt-get update && sudo apt-get install -y curl</code>
+                          <button onClick={() => copyToClipboard('sudo apt-get update && sudo apt-get install -y curl', 'Install command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-muted)', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>3</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Add the cron job</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code style={{ fontSize: '0.72rem', whiteSpace: 'pre-wrap' }}>{`(crontab -l 2>/dev/null; echo '*/5 * * * * curl -s "${updateURL}" > /dev/null') | crontab -`}</code>
+                          <button onClick={() => copyToClipboard(`(crontab -l 2>/dev/null; echo '*/5 * * * * curl -s "${updateURL}" > /dev/null') | crontab -`, 'Cron setup')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.35rem 0 0 0' }}>
+                          This one-liner safely appends to your existing crontab without overwriting it.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-secondary)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.2rem' }}>Verify it works</div>
+                        <div className="code-block" style={{ marginTop: '0.35rem' }}>
+                          <code>{`curl -s "${updateURL}"`}</code>
+                          <button onClick={() => copyToClipboard(`curl -s "${updateURL}"`, 'Test command')} className="btn btn-secondary btn-sm">Copy</button>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.35rem 0 0 0' }}>
+                          Should return <code>OK</code>. Your Pi will now keep your DNS record updated automatically.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Troubleshooting */}
+            <div style={{
+              marginTop: '1.25rem', padding: '1rem 1.25rem',
+              background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+              borderRadius: '10px', boxShadow: '0 1px 3px var(--shadow-md)',
+            }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                Troubleshooting
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div><strong>Getting "KO - invalid token"?</strong> — Regenerate your token and update the URL in your script.</div>
+                <div><strong>IP not updating?</strong> — Make sure your script is actually running. Check <code>crontab -l</code> or Task Scheduler.</div>
+                <div><strong>Need help?</strong> — Check the <Link to="/api-docs" style={{ color: 'var(--accent-text)' }}>API Docs</Link> or <Link to="/downloads" style={{ color: 'var(--accent-text)' }}>Downloads</Link> page for more options.</div>
+              </div>
             </div>
           </section>
         )}
