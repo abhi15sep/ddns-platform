@@ -92,6 +92,15 @@ function updateTrayMenu() {
 }
 
 function onUpdateResult(result) {
+  console.log(`[DDNS] Update result: ${result.domain} -> ${result.status} (IP: ${result.ip}${result.error ? ', error: ' + result.error : ''})`);
+
+  if (result.status === 'error' && store.get('showNotifications')) {
+    new Notification({
+      title: 'DDNS Update Failed',
+      body: `${result.domain}: ${result.error || 'Unknown error'}`,
+    }).show();
+  }
+
   if (result.changed && store.get('showNotifications')) {
     new Notification({
       title: 'IP Address Changed',
@@ -99,7 +108,9 @@ function onUpdateResult(result) {
     }).show();
   }
 
-  store.set('lastKnownIp', result.ip);
+  if (result.ip && result.ip !== 'Unknown') {
+    store.set('lastKnownIp', result.ip);
+  }
   store.set('lastUpdateTime', new Date().toISOString());
   updateTrayMenu();
 

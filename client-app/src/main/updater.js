@@ -1,54 +1,8 @@
 let intervalId = null;
+let startDebounce = null;
 
-async function doUpdate(store, onResult) {
-  const serverUrl = store.get('serverUrl');
-  const domains = store.get('domains');
-
-  if (!serverUrl || !domains.length) return;
-
-  for (const domain of domains) {
-    try {
-      const url = `${serverUrl}/update?domain=${encodeURIComponent(domain.subdomain)}&token=${encodeURIComponent(domain.token)}`;
-
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'DDNS-Desktop-Client/1.0' },
-      });
-      const text = await response.text();
-
-      if (text.trim() === 'OK') {
-        // Detect our current IP by making a request to the server
-        // The server auto-detects and we can check what it stored
-        const previousIp = store.get('lastKnownIp');
-
-        // We don't know the exact IP from the OK response,
-        // so we'll parse it from a separate check or just note the update
-        onResult({
-          domain: domain.subdomain,
-          ip: previousIp || 'Updated',
-          changed: false,
-          status: 'ok',
-        });
-      } else {
-        console.error(`Update failed for ${domain.subdomain}: ${text}`);
-        onResult({
-          domain: domain.subdomain,
-          ip: store.get('lastKnownIp') || 'Unknown',
-          changed: false,
-          status: 'error',
-          error: text,
-        });
-      }
-    } catch (err) {
-      console.error(`Update error for ${domain.subdomain}:`, err.message);
-      onResult({
-        domain: domain.subdomain,
-        ip: store.get('lastKnownIp') || 'Unknown',
-        changed: false,
-        status: 'error',
-        error: err.message,
-      });
-    }
-  }
+function normalizeUrl(url) {
+  return url.replace(/\/+$/, '');
 }
 
 async function detectPublicIP() {
@@ -67,28 +21,40 @@ async function detectPublicIP() {
 }
 
 async function smartUpdate(store, onResult) {
+  const serverUrl = store.get('serverUrl');
+  const domains = store.get('domains');
+
+  if (!serverUrl || !domains.length) return;
+
   const currentIp = await detectPublicIP();
   if (!currentIp) {
     console.error('Could not detect public IP');
+    onResult({
+      domain: domains[0]?.subdomain || 'unknown',
+      ip: store.get('lastKnownIp') || 'Unknown',
+      changed: false,
+      status: 'error',
+      error: 'Could not detect public IP',
+    });
     return;
   }
 
   const lastIp = store.get('lastKnownIp');
   const ipChanged = currentIp !== lastIp;
-
-  const serverUrl = store.get('serverUrl');
-  const domains = store.get('domains');
+  const baseUrl = normalizeUrl(serverUrl);
 
   for (const domain of domains) {
     try {
-      const url = `${serverUrl}/update?domain=${encodeURIComponent(domain.subdomain)}&token=${encodeURIComponent(domain.token)}&ip=${encodeURIComponent(currentIp)}`;
+      const url = `${baseUrl}/update?domain=${encodeURIComponent(domain.subdomain)}&token=${encodeURIComponent(domain.token)}&ip=${encodeURIComponent(currentIp)}`;
 
+      console.log(`Updating ${domain.subdomain}...`);
       const response = await fetch(url, {
         headers: { 'User-Agent': 'DDNS-Desktop-Client/1.0' },
       });
       const text = await response.text();
 
       if (text.trim() === 'OK') {
+        console.log(`Update OK for ${domain.subdomain} -> ${currentIp}`);
         onResult({
           domain: domain.subdomain,
           ip: currentIp,
@@ -96,6 +62,7 @@ async function smartUpdate(store, onResult) {
           status: 'ok',
         });
       } else {
+        console.error(`Update failed for ${domain.subdomain}: ${text}`);
         onResult({
           domain: domain.subdomain,
           ip: currentIp,
@@ -105,6 +72,7 @@ async function smartUpdate(store, onResult) {
         });
       }
     } catch (err) {
+      console.error(`Update error for ${domain.subdomain}:`, err.message);
       onResult({
         domain: domain.subdomain,
         ip: currentIp,
@@ -117,19 +85,33 @@ async function smartUpdate(store, onResult) {
 }
 
 function startUpdater(store, onResult) {
-  stopUpdater();
-  const intervalMinutes = store.get('updateInterval') || 5;
+  // Debounce: if called multiple times quickly (e.g. config changes),
+  // only actually start once after things settle
+  if (startDebounce) clearTimeout(startDebounce);
 
-  // Do an immediate check
-  smartUpdate(store, onResult);
+  startDebounce = setTimeout(() => {
+    stopUpdater();
+    const serverUrl = store.get('serverUrl');
+    const domains = store.get('domains');
 
-  // Schedule recurring checks
-  intervalId = setInterval(
-    () => smartUpdate(store, onResult),
-    intervalMinutes * 60 * 1000
-  );
+    if (!serverUrl || !domains.length) {
+      console.log('Updater not started: missing serverUrl or domains');
+      return;
+    }
 
-  console.log(`Updater started: checking every ${intervalMinutes} minutes`);
+    const intervalMinutes = store.get('updateInterval') || 5;
+
+    // Do an immediate check
+    smartUpdate(store, onResult);
+
+    // Schedule recurring checks
+    intervalId = setInterval(
+      () => smartUpdate(store, onResult),
+      intervalMinutes * 60 * 1000
+    );
+
+    console.log(`Updater started: checking every ${intervalMinutes} minutes (${domains.length} domain(s))`);
+  }, 500);
 }
 
 function stopUpdater() {
