@@ -95,7 +95,7 @@ User Device (cron job / router / desktop app)
 | 3000 | Gift site (Next.js) | Already in use — DO NOT TOUCH |
 | 3001 | DDNS API (Express) | NEW |
 | 3306 | MySQL | Already in use (gift site) — we add a new database |
-| 5432 | PostgreSQL | NEW |
+| 5432 or 5433 | PostgreSQL | NEW — check with `sudo -u postgres psql -c 'SHOW port;'` |
 | 8081 | PowerDNS API | NEW (localhost only) |
 
 ---
@@ -303,20 +303,45 @@ curl -I https://gift.devops-monk.com
 apt install -y postgresql postgresql-contrib
 ```
 
-**What this does**: Installs PostgreSQL on port 5432. This is a completely separate database server from MySQL. Your gift site uses MySQL — we're adding PostgreSQL for the DDNS app data.
+**What this does**: Installs PostgreSQL. This is a completely separate database server from MySQL. Your gift site uses MySQL — we're adding PostgreSQL for the DDNS app data.
 
-**Create the DDNS database and user**:
+**IMPORTANT — Check the PostgreSQL port** (it may NOT be 5432):
+```bash
+sudo -u postgres psql -c 'SHOW port;'
+```
+Note this port — you'll need it for `.env` and all `psql` commands below. On some systems it runs on **5433** instead of 5432.
+
+**Create the DDNS database and user** (passwordless for local connections):
 ```bash
 sudo -u postgres psql
 ```
 
 ```sql
-CREATE USER ddnsuser WITH PASSWORD 'PICK_A_STRONG_PASSWORD';
+CREATE USER ddnsuser;
 CREATE DATABASE ddns OWNER ddnsuser;
 \q
 ```
 
-**Save this password** — you'll need it for `.env`.
+**Set up trust auth** so the app can connect without a password (safe since PostgreSQL only listens on localhost):
+```bash
+nano /etc/postgresql/*/main/pg_hba.conf
+```
+
+Add this line near the top (before other rules):
+```
+local   ddns    ddnsuser                                trust
+host    ddns    ddnsuser    127.0.0.1/32                trust
+```
+
+Then restart PostgreSQL:
+```bash
+systemctl restart postgresql
+```
+
+**Your DATABASE_URL** will be (replace PORT with actual port from above):
+```
+DATABASE_URL=postgresql://ddnsuser@127.0.0.1:PORT/ddns
+```
 
 ### Step 4: Create PowerDNS MySQL database (uses existing MySQL — new database only)
 
@@ -345,6 +370,16 @@ EXIT;
 ```bash
 apt install -y pdns-server pdns-backend-mysql
 ```
+
+**IMPORTANT — Remove the default bind backend** (causes startup failure):
+```bash
+# Check for leftover bind config
+ls /etc/powerdns/pdns.d/
+# If you see bind.conf, remove it:
+rm -f /etc/powerdns/pdns.d/bind.conf
+```
+
+> If you skip this, PowerDNS will fail with `Fatal error: Trying to set unknown setting 'bind-config'`.
 
 ### Step 6: Clone the DDNS project
 
@@ -456,23 +491,45 @@ nano .env
 ```env
 PORT=3001
 NODE_ENV=production
-DATABASE_URL=postgresql://ddnsuser:YOUR_PG_PASSWORD@localhost:5432/ddns
+DATABASE_URL=postgresql://ddnsuser@127.0.0.1:PORT/ddns
 PDNS_API_URL=http://127.0.0.1:8081/api/v1
 PDNS_API_KEY=YOUR_POWERDNS_API_KEY
 DDNS_ZONE=dyn.devops-monk.com
 JWT_SECRET=RUN_openssl_rand_-hex_32_AND_PASTE_HERE
 APP_URL=https://ddns.devops-monk.com
 API_URL=https://api.devops-monk.com
+
+# OAuth (optional — skip if you only want email/password login)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
 ```
+
+> **Replace `PORT` in DATABASE_URL** with the actual PostgreSQL port you found in Step 3 (e.g., `5432` or `5433`).
 
 Generate JWT secret:
 ```bash
 openssl rand -hex 32
 ```
 
-**Run migrations and build**:
+**Run migrations** (replace PORT with your PostgreSQL port):
 ```bash
-npm run migrate
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/001_create_users.sql
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/002_create_oauth_accounts.sql
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/003_create_domains.sql
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/004_create_update_log.sql
+```
+
+**IMPORTANT — Grant permissions to ddnsuser** (the app user needs access to tables):
+```bash
+sudo -u postgres psql -p PORT -d ddns -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ddnsuser; GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ddnsuser;"
+```
+
+> If you skip this, the app will fail with `permission denied for table users`.
+
+**Build the server and dashboard**:
+```bash
 cd server && npm run build && cd ..
 cd dashboard && npm run build && cd ..
 ```
@@ -546,6 +603,9 @@ certbot renew --dry-run
 
 ### Step 14: Open port 53 in firewall (for DNS queries)
 
+You need to open port 53 in **TWO places**:
+
+**A) UFW (server-level firewall):**
 ```bash
 # Check current firewall rules first
 ufw status
@@ -555,7 +615,19 @@ ufw allow 53/tcp
 ufw allow 53/udp
 ```
 
-**Do NOT** open ports 3001, 5432, or 8081.
+**B) Hostinger VPS Firewall (network-level firewall):**
+
+> **IMPORTANT**: Hostinger has its own firewall that is separate from UFW. Even if UFW allows port 53, Hostinger's firewall will block it unless you add rules there too.
+
+1. Log in to [Hostinger VPS panel](https://hpanel.hostinger.com)
+2. Go to your VPS → **Firewall** section
+3. Add two rules:
+   - **Accept / TCP / Port 53 / Any source**
+   - **Accept / UDP / Port 53 / Any source**
+
+If you skip the Hostinger firewall step, `dig @ns1.devops-monk.com` will time out even though PowerDNS is running correctly.
+
+**Do NOT** open ports 3001, 5432, or 8081 in either firewall.
 
 ### Step 15: Verify everything works (including gift site!)
 
@@ -576,7 +648,55 @@ dig @127.0.0.1 dyn.devops-monk.com SOA
 pm2 status
 ```
 
-### Step 16: Set up automated backups
+### Step 16: Set up Google OAuth (optional — for "Sign in with Google")
+
+> Skip this if you only want email/password login.
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new project or select existing one
+3. Go to **OAuth consent screen**:
+   - App name: `DevOps Monk DDNS`
+   - User support email: your email
+   - Audience: **External**
+   - Contact email: your email
+   - Save
+4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**:
+   - Application type: **Web application**
+   - Name: `DDNS Web`
+   - Authorized JavaScript origins: `https://ddns.devops-monk.com`
+   - Authorized redirect URIs: `https://ddns.devops-monk.com/auth/google/callback`
+5. Copy **Client ID** and **Client Secret**
+6. Add to `.env` on VPS:
+   ```
+   GOOGLE_CLIENT_ID=your-client-id
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   ```
+7. Rebuild and restart:
+   ```bash
+   cd /opt/ddns-platform/server && npm run build && pm2 restart ddns-api
+   ```
+
+> **IMPORTANT**: The redirect URI must be `https://ddns.devops-monk.com/auth/google/callback` (NOT `api.devops-monk.com`). The Nginx config proxies `/auth/` from the dashboard domain to the backend, so the cookie stays on the same domain.
+
+### Step 17: Set up GitHub OAuth (optional — for "Sign in with GitHub")
+
+1. Go to GitHub → Settings → Developer Settings → OAuth Apps → **New OAuth App**
+2. Fill in:
+   - Application name: `DevOps Monk DDNS`
+   - Homepage URL: `https://ddns.devops-monk.com`
+   - Authorization callback URL: `https://ddns.devops-monk.com/auth/github/callback`
+3. Copy **Client ID** and generate a **Client Secret**
+4. Add to `.env` on VPS:
+   ```
+   GITHUB_CLIENT_ID=your-client-id
+   GITHUB_CLIENT_SECRET=your-client-secret
+   ```
+5. Rebuild and restart:
+   ```bash
+   cd /opt/ddns-platform/server && npm run build && pm2 restart ddns-api
+   ```
+
+### Step 18: Set up automated backups
 
 ```bash
 mkdir -p /var/backups/ddns
@@ -647,13 +767,15 @@ Click **Add**.
 
 Click **Add**.
 
-**Add CNAME for `ns1`** (PowerDNS nameserver):
+**Add A record for `ns1`** (PowerDNS nameserver):
+
+> **IMPORTANT**: `ns1` MUST be an **A record**, NOT a CNAME. NS targets cannot be CNAMEs — DNS resolvers will refuse to follow them, and your DDNS subdomains will not resolve publicly.
 
 | Field | Value |
 |-------|-------|
-| Type | **CNAME** |
+| Type | **A** |
 | Host | **ns1** |
-| Answer | **srv870470.hstgr.cloud** |
+| Answer | **YOUR_VPS_IPv4** (run `curl -4 ifconfig.me` on VPS to find it) |
 | TTL | **600** |
 
 Click **Add**.
@@ -719,7 +841,7 @@ After completing the steps, your Porkbun DNS should have these new records along
 | CNAME | `gift` | `srv870470.hstgr.cloud` | **EXISTING — do not touch** |
 | CNAME | `ddns` | `srv870470.hstgr.cloud` | NEW |
 | CNAME | `api` | `srv870470.hstgr.cloud` | NEW |
-| CNAME | `ns1` | `srv870470.hstgr.cloud` | NEW |
+| **A** | **`ns1`** | **YOUR_VPS_IPv4** | **NEW — must be A record, NOT CNAME** |
 | NS | `dyn` | `ns1.devops-monk.com` | NEW |
 
 ---
@@ -841,6 +963,74 @@ certbot --nginx -d ddns.devops-monk.com -d api.devops-monk.com
 # Test renewal
 certbot renew --dry-run
 ```
+
+### PostgreSQL "password authentication failed" or "connection refused"
+
+```bash
+# Check what port PostgreSQL is actually running on
+sudo -u postgres psql -c 'SHOW port;'
+
+# If it's 5433 (not 5432), update your .env:
+# DATABASE_URL=postgresql://ddnsuser@127.0.0.1:5433/ddns
+
+# If password auth fails, switch to trust auth (safe for localhost):
+nano /etc/postgresql/*/main/pg_hba.conf
+# Add these lines near the top:
+# local   ddns    ddnsuser    trust
+# host    ddns    ddnsuser    127.0.0.1/32    trust
+
+systemctl restart postgresql
+pm2 restart ddns-api
+```
+
+### "permission denied for table users"
+
+The app user doesn't have access to the tables. Fix:
+```bash
+sudo -u postgres psql -p PORT -d ddns -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ddnsuser; GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ddnsuser;"
+pm2 restart ddns-api
+```
+
+### "Unknown authentication strategy google"
+
+The `.env` file isn't being loaded at startup, so Google OAuth credentials are empty.
+```bash
+# Check the .env has Google credentials
+grep GOOGLE /opt/ddns-platform/.env
+
+# Rebuild the server (the config.ts uses __dirname to find .env)
+cd /opt/ddns-platform/server && npm run build && pm2 restart ddns-api
+```
+
+### PowerDNS "bind-config" error on startup
+
+```bash
+# Remove leftover bind backend config
+rm -f /etc/powerdns/pdns.d/bind.conf
+systemctl restart pdns
+```
+
+### DNS resolves directly but not publicly (nslookup fails)
+
+If `dig @ns1.devops-monk.com homelab.dyn.devops-monk.com A` works but `nslookup homelab.dyn.devops-monk.com` doesn't:
+
+1. **Check `ns1` is an A record, NOT a CNAME** — NS targets can't be CNAMEs
+2. **Check NS delegation exists**: `dig dyn.devops-monk.com NS` should return `ns1.devops-monk.com`
+3. **Check Hostinger firewall** allows port 53 TCP+UDP (separate from UFW)
+4. **Wait for negative cache to expire** — if a resolver cached a NXDOMAIN/empty response, it may take up to 30 minutes. Try a different resolver: `dig @1.1.1.1 homelab.dyn.devops-monk.com A`
+
+### Google OAuth "redirect_uri_mismatch" error
+
+The redirect URI in Google Cloud Console doesn't match what the app sends.
+- It must be exactly: `https://ddns.devops-monk.com/auth/google/callback`
+- NOT `https://api.devops-monk.com/auth/google/callback`
+- Changes in Google Console can take 5 minutes to propagate
+
+### OAuth sign-in redirects to home page without logging in
+
+The JWT cookie is being set on a different domain than the dashboard reads it from.
+- OAuth callback URL must use the **dashboard domain** (`ddns.devops-monk.com`), not the API domain
+- The Nginx config proxies `/auth/` to the backend, so cookies stay on the correct domain
 
 ### "KO - invalid token" when updating
 
