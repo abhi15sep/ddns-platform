@@ -196,6 +196,9 @@ export default function ProfilePage() {
             <Link to="/downloads" className="navbar-link">
               Downloads
             </Link>
+            <Link to="/api-docs" className="navbar-link">
+              API
+            </Link>
             {isAdmin && (
               <Link to="/admin" className="navbar-link">
                 Admin

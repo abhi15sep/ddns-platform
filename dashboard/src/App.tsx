@@ -11,6 +11,8 @@ import DomainList from './pages/DomainList';
 import DomainDetail from './pages/DomainDetail';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
+import ApiDocsPage from './pages/ApiDocsPage';
+import StatusPage from './pages/StatusPage';
 
 interface ThemeContextType {
   theme: 'light' | 'dark';
@@ -112,6 +114,8 @@ export default function App() {
         />
         <Route path="/downloads" element={<DownloadsPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/api-docs" element={<ApiDocsPage />} />
+        <Route path="/status" element={<StatusPage />} />
         <Route
           path="/dashboard"
           element={

@@ -234,6 +234,9 @@ export default function DomainList() {
             <Link to="/downloads" className="navbar-link">
               Downloads
             </Link>
+            <Link to="/api-docs" className="navbar-link">
+              API
+            </Link>
             {isAdmin && (
               <Link to="/admin" className="navbar-link">
                 Admin
@@ -500,7 +503,7 @@ export default function DomainList() {
 
         {/* Footer */}
         <footer className="footer">
-          DDNS Service &middot; <a href="/downloads">Downloads &amp; Setup Guides</a>
+          DDNS Service &middot; <a href="/downloads">Downloads</a> &middot; <a href="/api-docs">API Docs</a> &middot; <a href="/status">Status</a>
         </footer>
       </div>
     </>

@@ -195,6 +195,8 @@ export default function AdminPage() {
           </Link>
           <div className="navbar-links">
             <Link to="/dashboard" className="navbar-link">Dashboard</Link>
+            <Link to="/downloads" className="navbar-link">Downloads</Link>
+            <Link to="/api-docs" className="navbar-link">API</Link>
             <Link to="/admin" className="navbar-link active">Admin</Link>
           </div>
           <div className="navbar-right">

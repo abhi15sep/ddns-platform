@@ -294,19 +294,21 @@ Create comprehensive README at `client-app/README.md` (see separate file).
 | 1 | Landing page (hero, features, comparison, use cases, footer) | 1 day | **DONE** |
 | 2 | Dashboard UI overhaul (cards, stats bar, nav, status badges, toasts) | 2 days | **DONE** |
 | 3 | Downloads page with install instructions (6 platform tabs) | 1 day | **DONE** |
-| 4 | Desktop client README + build binaries | 1 day | **DONE** (README written, binaries need building) |
-| 5 | Setup guide tabs on domain detail page | 1 day | **DONE** (Linux, Windows, macOS, Docker) |
+| 4 | Desktop client README + build binaries | 1 day | **DONE** |
+| 5 | Setup guide tabs on domain detail page | 1 day | **DONE** |
 | 6 | Domain detail tabbed interface (Update URL, IP History, Setup) | 1 day | **DONE** |
 | 7 | Toast notifications + loading states | 0.5 day | **DONE** |
-| 8 | Dark mode | 0.5 day | PENDING |
-| 9 | User profile/settings page | 1 day | PENDING |
-| 10 | API docs page (interactive explorer) | 1 day | PENDING |
-| 11 | Status page (service health) | 0.5 day | PENDING |
-| 12 | Email/webhook notifications | 1 day | PENDING |
-| 13 | Admin dashboard | 2 days | PENDING |
-| 14 | Build & publish Electron binaries (CI/CD pipeline) | 1 day | PENDING |
-| 15 | Password reset flow | 0.5 day | PENDING |
-| 16 | 2FA/TOTP support | 1 day | PENDING |
+| 8 | Dark mode (system detection + manual toggle) | 0.5 day | **DONE** |
+| 9 | User profile/settings page (password, API token, delete account) | 1 day | **DONE** |
+| 10 | Admin dashboard (users, activity, rate limit settings, block/unblock) | 2 days | **DONE** |
+| 11 | Build Electron binaries (macOS x64/arm64, Windows, Linux deb/AppImage) | 1 day | **DONE** |
+| 12 | Live connectivity diagram (dashboard + desktop client) | 0.5 day | **DONE** |
+| 13 | Configurable rate limits via admin console (per-token, per-account) | 0.5 day | **DONE** |
+| 14 | API docs page (interactive explorer) | 1 day | PENDING |
+| 15 | Status page (public service health) | 0.5 day | PENDING |
+| 16 | Email/webhook notifications on IP change | 1 day | PENDING |
+| 17 | Password reset flow | 0.5 day | PENDING |
+| 18 | 2FA/TOTP support | 1 day | PENDING |
 
 ### What Was Completed
 
@@ -320,12 +322,11 @@ Create comprehensive README at `client-app/README.md` (see separate file).
 - `client-app/README.md` — Comprehensive desktop client documentation with install instructions for 8 platforms
 
 ### What's Pending Next
-1. **Deploy current changes** — rebuild dashboard on VPS and verify
-2. **Build Electron binaries** — set up CI/CD to produce .exe/.dmg/.deb/.AppImage
-3. **Dark mode** — CSS custom properties + system preference detection
-4. **User profile page** — change password, linked accounts, API keys
-5. **API docs page** — interactive Swagger-like explorer
-6. **Status page** — service health monitoring
+1. **API docs page** — interactive Swagger-like explorer with code examples
+2. **Public status page** — service health, DNS resolution, uptime
+3. **Email/webhook notifications** — alert when IP changes
+4. **Password reset flow** — email-based password recovery
+5. **2FA/TOTP support** — Google Authenticator / Authy
 
 ---
 
