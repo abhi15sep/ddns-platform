@@ -6,6 +6,7 @@ import {
   regenerateToken,
   updateWebhook,
   updateNotifyEmail,
+  updateRecordType,
 } from '../api/client';
 import {
   AreaChart,
@@ -26,6 +27,7 @@ interface Domain {
   token: string;
   webhook_url: string | null;
   notify_email: boolean;
+  record_type: string;
 }
 
 interface HistoryEntry {
@@ -500,6 +502,46 @@ export default function DomainDetail() {
         {/* Notifications Tab */}
         {activeTab === 'notifications' && (
           <section>
+            {/* DNS Record Type */}
+            <div className="info-card" style={{ marginBottom: '1rem' }}>
+              <h3 style={{ marginBottom: '0.25rem' }}>DNS Record Type</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                Choose which IP versions this domain accepts.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {(['A', 'AAAA', 'BOTH'] as const).map((rt) => (
+                  <button
+                    key={rt}
+                    className={`btn btn-sm ${domain.record_type === rt ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={async () => {
+                      try {
+                        const r = await updateRecordType(subdomain!, rt);
+                        setDomain(r.data);
+                        addToast(`Record type set to ${rt === 'BOTH' ? 'A + AAAA' : rt}`, 'success');
+                      } catch {
+                        addToast('Failed to update record type', 'error');
+                      }
+                    }}
+                  >
+                    {rt === 'A' ? 'IPv4 Only (A)' : rt === 'AAAA' ? 'IPv6 Only (AAAA)' : 'Both (A + AAAA)'}
+                  </button>
+                ))}
+              </div>
+              <div style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem 0.75rem',
+                background: 'var(--bg-secondary)',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+              }}>
+                {domain.record_type === 'A' && 'Only IPv4 addresses will be accepted. IPv6 updates will be rejected.'}
+                {domain.record_type === 'AAAA' && 'Only IPv6 addresses will be accepted. IPv4 updates will be rejected.'}
+                {domain.record_type === 'BOTH' && 'Both IPv4 and IPv6 addresses will be accepted. The DNS record type is determined by the IP sent.'}
+                {!domain.record_type && 'Only IPv4 addresses will be accepted (default).'}
+              </div>
+            </div>
+
             {/* Email Notification */}
             <div className="info-card" style={{ marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>

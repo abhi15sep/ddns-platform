@@ -258,6 +258,43 @@ const history = await res.json();`,
     },
   },
   {
+    method: 'PUT',
+    path: '/api/domains/:subdomain/record-type',
+    title: 'Update Record Type',
+    desc: 'Set the DNS record type for a domain. Controls whether IPv4, IPv6, or both are accepted.',
+    auth: 'cookie',
+    params: [
+      { name: 'subdomain', in: 'path', required: true, desc: 'The subdomain to configure' },
+      { name: 'record_type', in: 'body', required: true, desc: '"A" (IPv4 only), "AAAA" (IPv6 only), or "BOTH"' },
+    ],
+    response: `{
+  "subdomain": "myhome",
+  "record_type": "BOTH",
+  ...
+}`,
+    examples: {
+      curl: `# Set to accept both IPv4 and IPv6
+curl -X PUT https://api.devops-monk.com/api/domains/myhome/record-type \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_API_TOKEN" \\
+  -d '{"record_type": "BOTH"}'`,
+      python: `r = requests.put("https://api.devops-monk.com/api/domains/myhome/record-type",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"},
+    json={"record_type": "BOTH"})`,
+      javascript: `const res = await fetch(
+  "https://api.devops-monk.com/api/domains/myhome/record-type",
+  {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_API_TOKEN"
+    },
+    body: JSON.stringify({ record_type: "BOTH" })
+  }
+);`,
+    },
+  },
+  {
     method: 'POST',
     path: '/auth/login',
     title: 'Login',
@@ -507,6 +544,7 @@ function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
     GET: '#059669',
     POST: '#d97706',
+    PUT: '#2563eb',
     DELETE: '#dc2626',
   };
   return (

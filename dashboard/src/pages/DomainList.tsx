@@ -10,6 +10,7 @@ interface Domain {
   current_ip: string | null;
   updated_at: string | null;
   token: string;
+  record_type: string;
 }
 
 interface Toast {
@@ -473,6 +474,18 @@ export default function DomainList() {
                             }`}
                           />
                           {statusLabel(status)}
+                        </span>
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 600,
+                          padding: '0.1rem 0.4rem',
+                          borderRadius: '4px',
+                          background: 'var(--bg-secondary)',
+                          color: 'var(--text-muted)',
+                          fontFamily: 'monospace',
+                          letterSpacing: '0.02em',
+                        }}>
+                          {d.record_type === 'BOTH' ? 'A+AAAA' : d.record_type || 'A'}
                         </span>
                       </div>
                     </div>

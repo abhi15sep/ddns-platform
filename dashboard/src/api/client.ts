@@ -37,6 +37,9 @@ export const updateWebhook = (subdomain: string, webhookUrl: string | null) =>
 export const updateNotifyEmail = (subdomain: string, enabled: boolean) =>
   api.put(`/api/domains/${subdomain}/notify-email`, { enabled });
 
+export const updateRecordType = (subdomain: string, record_type: string) =>
+  api.put(`/api/domains/${subdomain}/record-type`, { record_type });
+
 // Profile
 export const getProfile = () => api.get('/auth/profile');
 

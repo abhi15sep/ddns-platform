@@ -152,12 +152,23 @@ router.get('/', async (req: Request, res: Response) => {
     const oldIP = result.rows[0].current_ip;
     const webhookUrl = result.rows[0].webhook_url;
     const notifyEmail = result.rows[0].notify_email;
+    const domainRecordType: string = result.rows[0].record_type || 'A';
 
     // Validate IP (v4 or v6)
     const isV4 = IPV4_RE.test(detectedIP);
     const isV6 = IPV6_RE.test(detectedIP);
     if (!isV4 && !isV6) {
       res.status(400).send('KO - invalid IP');
+      return;
+    }
+
+    // Check IP type matches domain's record_type setting
+    if (domainRecordType === 'A' && !isV4) {
+      res.status(400).send('KO - domain is set to IPv4 only, but received IPv6 address');
+      return;
+    }
+    if (domainRecordType === 'AAAA' && !isV6) {
+      res.status(400).send('KO - domain is set to IPv6 only, but received IPv4 address');
       return;
     }
 

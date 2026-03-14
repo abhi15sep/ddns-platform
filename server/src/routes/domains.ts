@@ -114,6 +114,24 @@ router.put('/:subdomain/notify-email', async (req: Request, res: Response) => {
   res.json(result.rows[0]);
 });
 
+// Update record type (A, AAAA, BOTH)
+router.put('/:subdomain/record-type', async (req: Request, res: Response) => {
+  const { record_type } = req.body;
+  if (!record_type || !['A', 'AAAA', 'BOTH'].includes(record_type)) {
+    res.status(400).json({ error: 'Invalid record type. Must be A, AAAA, or BOTH.' });
+    return;
+  }
+  const result = await pool.query(
+    'UPDATE domains SET record_type=$1 WHERE subdomain=$2 AND user_id=$3 RETURNING *',
+    [record_type, req.params.subdomain, (req.user as AuthUser).sub]
+  );
+  if (!result.rows.length) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  res.json(result.rows[0]);
+});
+
 // Regenerate token
 router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) => {
   const result = await pool.query(

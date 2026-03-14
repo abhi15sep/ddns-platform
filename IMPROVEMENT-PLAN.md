@@ -427,12 +427,14 @@ Show and manage active login sessions.
 - Profile page: "Active Sessions" section with browser/OS detection, IP, last active time
 - "Current" badge on active session, "Revoke" button on others, "Logout All Other Devices" button
 
-### 5.9 IPv6 Per-Domain Toggle (MEDIUM)
+### 5.9 IPv6 Per-Domain Toggle (MEDIUM) — DONE
 Let users choose record type per domain.
-- Options: A (IPv4 only), AAAA (IPv6 only), Both
-- Add `record_type` column to domains table (default: 'A')
-- Update `/update` endpoint to create appropriate DNS records
-- Show record type badge on domain cards
+- `record_type` column on domains table: `A` (default), `AAAA`, or `BOTH`
+- `PUT /api/domains/:subdomain/record-type` — update record type
+- `/update` endpoint validates IP matches domain's record_type (rejects mismatches)
+- Domain detail page: DNS Record Type selector with 3 buttons (IPv4 Only, IPv6 Only, Both)
+- Domain list: record type badge on each domain card
+- API docs updated with new endpoint
 
 ### 5.10 Uptime Monitoring (LOW)
 External monitoring for the platform itself.
