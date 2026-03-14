@@ -61,7 +61,7 @@
 
 | Feature | DuckDNS | No-IP | Dyn | **DevOps Monk DDNS** |
 |---------|---------|-------|-----|---------------------|
-| Free | Yes (5 domains) | Yes (3, confirm monthly) | No | **Yes (unlimited)** |
+| Free | Yes (5 domains) | Yes (3, confirm monthly) | No | **Yes (5 domains)** |
 | Open Source | No | No | No | **Yes** |
 | Self-Hosted | No | No | No | **Yes** |
 | Modern Dashboard | No | Yes | N/A | **Yes** |

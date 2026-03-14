@@ -211,12 +211,12 @@ export default function LandingPage() {
           <p style={styles.sectionSub}>Powerful features, completely free.</p>
           <div style={styles.featuresGrid}>
             {[
-              { icon: <IconGlobe />, title: 'Unlimited Subdomains', desc: 'No artificial limits on the number of domains you can create.' },
+              { icon: <IconGlobe />, title: '5 Free Subdomains', desc: 'Create up to 5 subdomains per account — no credit card required.' },
               { icon: <IconStack />, title: 'IPv4 + IPv6 Support', desc: 'Full dual-stack support. Update A and AAAA records seamlessly.' },
               { icon: <IconClock />, title: 'IP Change History & Charts', desc: 'Track every IP change with timestamps and visual charts.' },
               { icon: <IconMonitor />, title: 'Desktop App', desc: 'Native app for Windows, macOS, and Linux. Zero terminal knowledge needed.' },
               { icon: <IconCode />, title: 'Open Source & Self-Hosted', desc: 'Run your own instance. Inspect every line of code on GitHub.' },
-              { icon: <IconPlug />, title: 'DuckDNS-Compatible API', desc: 'Drop-in replacement. Switch from DuckDNS with zero config changes.' },
+              { icon: <IconPlug />, title: 'Simple HTTP API', desc: 'Update your IP with a single GET request. Works with routers, cron, scripts, and more.' },
             ].map((f) => (
               <div key={f.title} style={styles.featureCard}>
                 <div style={styles.featureIcon}>{f.icon}</div>
@@ -246,7 +246,7 @@ export default function LandingPage() {
               <tbody>
                 {([
                   ['Price', <Free key="f1" />, <Free key="f2" />, <Free key="f3" />],
-                  ['Domain Limit', '5 subdomains', '1 hostname', 'Unlimited'],
+                  ['Domain Limit', '5 subdomains', '1 hostname', '5 subdomains'],
                   ['Monthly Confirmation', <Cross key="c1" />, <span key="s1" style={{ color: 'var(--badge-never-text)', fontWeight: 700 }}>Required</span>, <Cross key="c2" />],
                   ['IP Change History', <Cross key="c3" />, <Cross key="c4" />, <Check key="k1" />],
                   ['Desktop App', <Cross key="c5" />, <Check key="k2" />, <Check key="k3" />],
