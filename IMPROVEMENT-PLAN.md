@@ -308,7 +308,7 @@ Create comprehensive README at `client-app/README.md` (see separate file).
 | 15 | Status page (public service health) | 0.5 day | **DONE** |
 | 16 | Webhook notifications on IP change | 1 day | **DONE** |
 | 17 | Password reset flow | 0.5 day | **DONE** |
-| 18 | 2FA/TOTP support | 1 day | PENDING |
+| 18 | 2FA/TOTP support | 1 day | **DONE** |
 
 ### What Was Completed
 
@@ -337,8 +337,14 @@ Create comprehensive README at `client-app/README.md` (see separate file).
 - `dashboard/src/pages/ResetPasswordPage.tsx` — New password form with token validation, error states
 - `dashboard/src/pages/LoginPage.tsx` — Added "Forgot your password?" link
 
-### What's Pending Next
-1. **2FA/TOTP support** — Google Authenticator / Authy
+**2FA/TOTP Support:**
+- `db/migrations/009_create_totp_secrets.sql` — TOTP secrets table with backup codes
+- `server/src/routes/auth.ts` — 2FA setup, verify, disable endpoints; modified login + OAuth flow for 2FA challenge
+- `dashboard/src/pages/LoginPage.tsx` — 2FA challenge screen with 6-digit code input and backup code support
+- `dashboard/src/pages/ProfilePage.tsx` — 2FA section: enable with QR code, verify, view backup codes, disable with password
+
+### All Items Complete
+All 18 planned improvements have been implemented and deployed.
 
 ---
 
