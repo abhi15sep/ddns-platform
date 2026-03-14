@@ -1260,6 +1260,131 @@ section {
   to { transform: rotate(360deg); }
 }
 
+/* ===== CONNECTIVITY DIAGRAM ===== */
+.conn-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 1.25rem 0.5rem;
+}
+.conn-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 80px;
+}
+.conn-ring {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2.5px solid var(--border-default);
+  transition: all 0.4s ease;
+  position: relative;
+}
+.conn-ring svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--text-muted);
+  transition: fill 0.4s;
+}
+.conn-ring.conn-ok {
+  border-color: var(--badge-active-text);
+  background: var(--badge-active-bg);
+  box-shadow: 0 0 14px rgba(5, 150, 105, 0.2);
+}
+.conn-ring.conn-ok svg { fill: var(--badge-active-text); }
+.conn-ring.conn-err {
+  border-color: var(--badge-never-text);
+  background: var(--badge-never-bg);
+  box-shadow: 0 0 14px rgba(220, 38, 38, 0.2);
+}
+.conn-ring.conn-err svg { fill: var(--badge-never-text); }
+.conn-ring.conn-checking {
+  border-color: var(--badge-stale-text);
+  background: var(--badge-stale-bg);
+  animation: conn-pulse 1.2s ease-in-out infinite;
+}
+.conn-ring.conn-checking svg { fill: var(--badge-stale-text); }
+
+@keyframes conn-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(217, 119, 6, 0.1); }
+  50% { box-shadow: 0 0 20px rgba(217, 119, 6, 0.3); }
+}
+
+.conn-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.conn-detail {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.conn-line {
+  width: 52px;
+  height: 2px;
+  background: var(--border-default);
+  margin-bottom: 1.5rem;
+  position: relative;
+  transition: background 0.4s, box-shadow 0.4s;
+}
+.conn-line::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--border-default);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: border-color 0.4s;
+}
+.conn-line.conn-line-ok {
+  background: var(--badge-active-text);
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.2);
+}
+.conn-line.conn-line-ok::after {
+  border-left-color: var(--badge-active-text);
+}
+.conn-line.conn-line-err {
+  background: var(--badge-never-text);
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.2);
+}
+.conn-line.conn-line-err::after {
+  border-left-color: var(--badge-never-text);
+}
+
+.conn-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 3px var(--shadow-md);
+  border: 1px solid var(--border-light);
+  margin-bottom: 1.5rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+.conn-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+.conn-card-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .stats-bar {
@@ -1288,6 +1413,29 @@ section {
   }
   .create-row .domain-suffix {
     text-align: center;
+  }
+  .conn-diagram {
+    gap: 0;
+  }
+  .conn-ring {
+    width: 42px;
+    height: 42px;
+  }
+  .conn-ring svg {
+    width: 18px;
+    height: 18px;
+  }
+  .conn-line {
+    width: 28px;
+  }
+  .conn-node {
+    min-width: 60px;
+  }
+  .conn-label {
+    font-size: 0.6rem;
+  }
+  .conn-detail {
+    font-size: 0.55rem;
   }
 }
 

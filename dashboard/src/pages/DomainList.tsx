@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getDomains, createDomain, deleteDomain, checkAdmin } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
@@ -17,6 +17,8 @@ interface Toast {
   message: string;
   type: 'success' | 'error';
 }
+
+type ConnStatus = 'checking' | 'ok' | 'err';
 
 function relativeTime(dateStr: string): string {
   const now = Date.now();
@@ -44,6 +46,20 @@ function statusLabel(s: 'active' | 'stale' | 'never'): string {
   return 'Never';
 }
 
+/* ---- SVG Icons for connectivity nodes ---- */
+const IconDevice = () => (
+  <svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+);
+const IconInternet = () => (
+  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+);
+const IconServer = () => (
+  <svg viewBox="0 0 24 24"><path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+);
+const IconDNS = () => (
+  <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+);
+
 let toastId = 0;
 
 export default function DomainList() {
@@ -55,6 +71,15 @@ export default function DomainList() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Connectivity state
+  const [connInternet, setConnInternet] = useState<ConnStatus>('checking');
+  const [connServer, setConnServer] = useState<ConnStatus>('checking');
+  const [connDns, setConnDns] = useState<ConnStatus>('checking');
+  const [internetLatency, setInternetLatency] = useState<string>('--');
+  const [serverLatency, setServerLatency] = useState<string>('--');
+  const [dnsDetail, setDnsDetail] = useState<string>('--');
+  const healthTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const addToast = useCallback((message: string, type: 'success' | 'error') => {
     const id = ++toastId;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -63,10 +88,73 @@ export default function DomainList() {
     }, 3000);
   }, []);
 
+  // Health checks
+  const runHealthChecks = useCallback(async (currentDomains?: Domain[]) => {
+    // Internet check
+    setConnInternet('checking');
+    try {
+      const start = Date.now();
+      const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        setConnInternet('ok');
+        setInternetLatency(`${Date.now() - start}ms`);
+      } else {
+        setConnInternet('err');
+        setInternetLatency('Error');
+      }
+    } catch {
+      setConnInternet('err');
+      setInternetLatency('Offline');
+    }
+
+    // DDNS server check
+    setConnServer('checking');
+    try {
+      const start = Date.now();
+      const res = await fetch('/health', { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        setConnServer('ok');
+        setServerLatency(`${Date.now() - start}ms`);
+      } else {
+        setConnServer('err');
+        setServerLatency(`HTTP ${res.status}`);
+      }
+    } catch {
+      setConnServer('err');
+      setServerLatency('Down');
+    }
+
+    // DNS status (based on domain data)
+    const ds = currentDomains || domains;
+    if (ds.length === 0) {
+      setConnDns('checking');
+      setDnsDetail('No domains');
+    } else {
+      const active = ds.filter((d) => d.current_ip).length;
+      if (active === ds.length) {
+        setConnDns('ok');
+        setDnsDetail(`${active} synced`);
+      } else if (active > 0) {
+        setConnDns('ok');
+        setDnsDetail(`${active}/${ds.length} synced`);
+      } else {
+        setConnDns('err');
+        setDnsDetail('No IPs set');
+      }
+    }
+  }, [domains]);
+
   useEffect(() => {
-    getDomains().then((r) => setDomains(r.data));
+    getDomains().then((r) => {
+      setDomains(r.data);
+      runHealthChecks(r.data);
+    });
     checkAdmin().then(() => setIsAdmin(true)).catch(() => {});
-  }, []);
+
+    // Refresh health every 30s
+    healthTimer.current = setInterval(() => runHealthChecks(), 30000);
+    return () => { if (healthTimer.current) clearInterval(healthTimer.current); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCreate() {
     setError('');
@@ -115,13 +203,17 @@ export default function DomainList() {
   }
 
   // Stats
-  const publicIP =
-    domains.find((d) => d.current_ip)?.current_ip ?? '---';
+  const publicIP = domains.find((d) => d.current_ip)?.current_ip ?? '---';
   const lastUpdate = domains.reduce<string | null>((latest, d) => {
     if (!d.updated_at) return latest;
     if (!latest) return d.updated_at;
     return new Date(d.updated_at) > new Date(latest) ? d.updated_at : latest;
   }, null);
+
+  const ringClass = (s: ConnStatus) =>
+    s === 'ok' ? 'conn-ring conn-ok' : s === 'err' ? 'conn-ring conn-err' : 'conn-ring conn-checking';
+  const lineClass = (s: ConnStatus) =>
+    s === 'ok' ? 'conn-line conn-line-ok' : s === 'err' ? 'conn-line conn-line-err' : 'conn-line';
 
   return (
     <>
@@ -172,6 +264,62 @@ export default function DomainList() {
       )}
 
       <div className="container">
+        {/* Connectivity Diagram */}
+        <div className="conn-card">
+          <div className="conn-card-header">
+            <span className="conn-card-title">Connectivity</span>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => runHealthChecks()}
+              title="Refresh status"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+              </svg>
+            </button>
+          </div>
+          <div className="conn-diagram">
+            <div className="conn-node">
+              <div className={ringClass(connInternet)}>
+                <IconDevice />
+              </div>
+              <span className="conn-label">Your Device</span>
+              <span className="conn-detail">{publicIP !== '---' ? publicIP : '--'}</span>
+            </div>
+
+            <div className={lineClass(connInternet)} />
+
+            <div className="conn-node">
+              <div className={ringClass(connInternet)}>
+                <IconInternet />
+              </div>
+              <span className="conn-label">Internet</span>
+              <span className="conn-detail">{internetLatency}</span>
+            </div>
+
+            <div className={lineClass(connServer)} />
+
+            <div className="conn-node">
+              <div className={ringClass(connServer)}>
+                <IconServer />
+              </div>
+              <span className="conn-label">DDNS Server</span>
+              <span className="conn-detail">{serverLatency}</span>
+            </div>
+
+            <div className={lineClass(connDns)} />
+
+            <div className="conn-node">
+              <div className={ringClass(connDns)}>
+                <IconDNS />
+              </div>
+              <span className="conn-label">DNS Records</span>
+              <span className="conn-detail">{dnsDetail}</span>
+            </div>
+          </div>
+        </div>
+
         {/* Stats bar */}
         <div className="stats-bar">
           <div className="stat-card">
@@ -191,8 +339,8 @@ export default function DomainList() {
           <div className="stat-card">
             <div className="stat-label">Service Status</div>
             <div className="stat-value stat-value-sm">
-              <span className="status-dot status-dot-green" />
-              Operational
+              <span className={`status-dot ${connServer === 'ok' ? 'status-dot-green' : connServer === 'err' ? 'status-dot-red' : 'status-dot-yellow'}`} />
+              {connServer === 'ok' ? 'Operational' : connServer === 'err' ? 'Degraded' : 'Checking...'}
             </div>
           </div>
         </div>
