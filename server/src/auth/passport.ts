@@ -54,7 +54,7 @@ if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
       {
         clientID: config.GOOGLE_CLIENT_ID,
         clientSecret: config.GOOGLE_CLIENT_SECRET,
-        callbackURL: `${config.API_URL}/auth/google/callback`,
+        callbackURL: `${config.APP_URL}/auth/google/callback`,
         scope: ['profile', 'email'],
       },
       async (_accessToken, _refreshToken, profile, done) => {
@@ -75,7 +75,7 @@ if (config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET) {
       {
         clientID: config.GITHUB_CLIENT_ID,
         clientSecret: config.GITHUB_CLIENT_SECRET,
-        callbackURL: `${config.API_URL}/auth/github/callback`,
+        callbackURL: `${config.APP_URL}/auth/github/callback`,
         scope: ['user:email'],
       },
       async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
