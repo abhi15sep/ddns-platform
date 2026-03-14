@@ -1,29 +1,45 @@
-name: Deploy
+name: CI & Deploy
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 concurrency:
-  group: deploy
+  group: ci-deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  typecheck:
-    name: Typecheck
+  typecheck-server:
+    name: Server — Typecheck & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: cd server && npm install && npm run lint
-      - run: cd dashboard && npm install && npm run lint
+      - run: cd server && npm install
+      - run: cd server && npm run lint
+      - run: cd server && npm run build
+
+  typecheck-dashboard:
+    name: Dashboard — Typecheck & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd dashboard && npm install
+      - run: cd dashboard && npm run lint
+      - run: cd dashboard && npm run build
 
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    needs: [typecheck]
+    needs: [typecheck-server, typecheck-dashboard]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
