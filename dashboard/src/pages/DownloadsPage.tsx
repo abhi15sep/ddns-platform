@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 type TabKey = 'linux' | 'windows' | 'docker' | 'synology' | 'router' | 'rpi';
 
@@ -108,6 +109,13 @@ function CopyBlock({ code }: { code: string }) {
 
 export default function DownloadsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('linux');
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout();
+    navigate('/login');
+  }
 
   const platforms = [
     {
@@ -156,11 +164,37 @@ export default function DownloadsPage() {
   return (
     <div className="dl-page">
       {/* Navigation */}
-      <nav className="dl-nav">
-        <Link to="/dashboard" className="dl-nav-brand">DDNS</Link>
-        <div className="dl-nav-links">
-          <Link to="/login">Sign In</Link>
-          <Link to="/register" className="btn btn-primary">Get Started</Link>
+      <nav className="navbar">
+        <div className="navbar-inner">
+          <Link to={user ? '/dashboard' : '/'} className="navbar-brand">
+            <span className="navbar-brand-icon">D</span>
+            DDNS
+          </Link>
+          <div className="navbar-links">
+            {user && (
+              <Link to="/dashboard" className="navbar-link">
+                Dashboard
+              </Link>
+            )}
+            <Link to="/downloads" className="navbar-link active">
+              Downloads
+            </Link>
+          </div>
+          <div className="navbar-right">
+            {user ? (
+              <>
+                <span className="navbar-email">{user.email}</span>
+                <button onClick={handleLogout} className="btn btn-secondary btn-sm">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-secondary btn-sm">Sign In</Link>
+                <Link to="/register" className="btn btn-primary btn-sm">Get Started</Link>
+              </>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -296,12 +330,24 @@ export default function DownloadsPage() {
 
       {/* Footer CTA */}
       <section className="dl-cta">
-        <h2>Ready to get started?</h2>
-        <p>Create a free account, claim your subdomain, and keep your IP in sync.</p>
-        <div className="dl-cta-buttons">
-          <Link to="/register" className="btn btn-primary dl-cta-btn">Create Account</Link>
-          <Link to="/login" className="btn btn-secondary dl-cta-btn">Sign In</Link>
-        </div>
+        {user ? (
+          <>
+            <h2>Go to your dashboard</h2>
+            <p>Manage your domains, view IP history, and get update URLs.</p>
+            <div className="dl-cta-buttons">
+              <Link to="/dashboard" className="btn btn-primary dl-cta-btn">Dashboard</Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2>Ready to get started?</h2>
+            <p>Create a free account, claim your subdomain, and keep your IP in sync.</p>
+            <div className="dl-cta-buttons">
+              <Link to="/register" className="btn btn-primary dl-cta-btn">Create Account</Link>
+              <Link to="/login" className="btn btn-secondary dl-cta-btn">Sign In</Link>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
