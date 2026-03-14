@@ -202,9 +202,9 @@ router.get('/', async (req: Request, res: Response) => {
       ]
     );
 
-    // Prune logs older than 3 hours for this domain
+    // Prune logs older than 30 days for this domain
     await pool.query(
-      "DELETE FROM update_log WHERE domain=$1 AND updated_at < NOW() - INTERVAL '3 hours'",
+      "DELETE FROM update_log WHERE domain=$1 AND updated_at < NOW() - INTERVAL '30 days'",
       [domain]
     );
 

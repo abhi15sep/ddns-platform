@@ -28,8 +28,8 @@ export const deleteDomain = (subdomain: string) =>
 export const regenerateToken = (subdomain: string) =>
   api.post(`/api/domains/${subdomain}/regenerate-token`);
 
-export const getDomainHistory = (subdomain: string) =>
-  api.get(`/api/domains/${subdomain}/history`);
+export const getDomainHistory = (subdomain: string, range: string = '24h') =>
+  api.get(`/api/domains/${subdomain}/history`, { params: { range } });
 
 export const updateWebhook = (subdomain: string, webhookUrl: string | null) =>
   api.put(`/api/domains/${subdomain}/webhook`, { webhook_url: webhookUrl });

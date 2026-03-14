@@ -37,6 +37,7 @@ interface HistoryEntry {
 
 type TabName = 'update' | 'history' | 'setup' | 'notifications';
 type SetupPlatform = 'linux' | 'macos' | 'windows' | 'docker' | 'rpi';
+type HistoryRange = '3h' | '24h' | '7d' | '30d';
 
 interface Toast {
   id: number;
@@ -83,6 +84,7 @@ export default function DomainDetail() {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookSaving, setWebhookSaving] = useState(false);
   const [setupPlatform, setSetupPlatform] = useState<SetupPlatform>('linux');
+  const [historyRange, setHistoryRange] = useState<HistoryRange>('24h');
 
   const addToast = useCallback((message: string, type: 'success' | 'error') => {
     const id = ++toastIdCounter;
@@ -99,10 +101,14 @@ export default function DomainDetail() {
       setDomain(found);
       if (found) setWebhookUrl(found.webhook_url || '');
     });
-    getDomainHistory(subdomain).then((r) =>
+  }, [subdomain]);
+
+  useEffect(() => {
+    if (!subdomain) return;
+    getDomainHistory(subdomain, historyRange).then((r) =>
       setHistory([...r.data].reverse())
     );
-  }, [subdomain]);
+  }, [subdomain, historyRange]);
 
   async function handleRegenerate() {
     if (!subdomain) return;
@@ -340,6 +346,41 @@ export default function DomainDetail() {
         {/* History Tab */}
         {activeTab === 'history' && (
           <section>
+            {/* Range picker + Export */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div className="dl-tabs" style={{ marginBottom: 0 }}>
+                {(['3h', '24h', '7d', '30d'] as HistoryRange[]).map((r) => (
+                  <button
+                    key={r}
+                    className={`dl-tab ${historyRange === r ? 'dl-tab-active' : ''}`}
+                    onClick={() => setHistoryRange(r)}
+                  >
+                    {r === '3h' ? '3 Hours' : r === '24h' ? '24 Hours' : r === '7d' ? '7 Days' : '30 Days'}
+                  </button>
+                ))}
+              </div>
+              {history.length > 0 && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    const header = 'IP Address,Source IP,User Agent,Time\n';
+                    const rows = [...history].reverse().map((h) =>
+                      `"${h.ip}","${h.source_ip || ''}","${(h.user_agent || '').replace(/"/g, '""')}","${new Date(h.updated_at).toISOString()}"`
+                    ).join('\n');
+                    const blob = new Blob([header + rows], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${subdomain}-history-${historyRange}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Export CSV
+                </button>
+              )}
+            </div>
+
             {chartData.length > 0 ? (
               <>
                 <div className="chart-section">
@@ -362,7 +403,13 @@ export default function DomainDetail() {
                       />
                       <XAxis
                         dataKey="updated_at"
-                        tickFormatter={(v: string) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        tickFormatter={(v: string) => {
+                          const d = new Date(v);
+                          if (historyRange === '7d' || historyRange === '30d') {
+                            return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                          }
+                          return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }}
                         stroke={theme === 'dark' ? '#6b7280' : '#9ca3af'}
                         fontSize={11}
                         tickLine={false}
@@ -441,9 +488,9 @@ export default function DomainDetail() {
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                 </div>
-                <div className="empty-state-title">No updates in the last 3 hours</div>
+                <div className="empty-state-title">No updates in the last {historyRange === '3h' ? '3 hours' : historyRange === '24h' ? '24 hours' : historyRange === '7d' ? '7 days' : '30 days'}</div>
                 <div className="empty-state-desc">
-                  Update logs are kept for 3 hours. Send an update using the Update URL tab to see IP history here.
+                  Try a longer time range, or send an update using the Update URL tab to see IP history here.
                 </div>
               </div>
             )}

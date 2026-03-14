@@ -127,13 +127,23 @@ router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) 
   res.json(result.rows[0]);
 });
 
-// Get update history (last 3 hours)
+// Get update history (configurable range: 3h, 24h, 7d, 30d)
 router.get('/:subdomain/history', async (req: Request, res: Response) => {
+  const validRanges: Record<string, string> = {
+    '3h': '3 hours',
+    '24h': '24 hours',
+    '7d': '7 days',
+    '30d': '30 days',
+  };
+  const range = (req.query.range as string) || '24h';
+  const interval = validRanges[range] || '24 hours';
+  const limit = range === '30d' ? 2000 : range === '7d' ? 1000 : 500;
+
   const result = await pool.query(
     `SELECT ip, source_ip, user_agent, updated_at FROM update_log
-     WHERE domain=$1 AND updated_at >= NOW() - INTERVAL '3 hours'
-     ORDER BY updated_at DESC LIMIT 200`,
-    [req.params.subdomain]
+     WHERE domain=$1 AND updated_at >= NOW() - INTERVAL '${interval}'
+     ORDER BY updated_at DESC LIMIT $2`,
+    [req.params.subdomain, limit]
   );
   res.json(result.rows);
 });
