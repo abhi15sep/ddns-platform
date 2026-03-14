@@ -326,19 +326,19 @@ router.get('/export-data', requireAuth, async (req: Request, res: Response) => {
 
     // IP history for all domains
     const historyResult = await pool.query(
-      `SELECT ul.domain, ul.ip, ul.changed_at
+      `SELECT ul.domain, ul.ip, ul.updated_at
        FROM update_log ul
        JOIN domains d ON ul.domain = d.subdomain
        WHERE d.user_id=$1
-       ORDER BY ul.domain, ul.changed_at DESC`,
+       ORDER BY ul.domain, ul.updated_at DESC`,
       [userId]
     );
 
     if (format === 'csv') {
       // CSV: IP history only (most useful for CSV)
-      const lines = ['domain,ip,changed_at'];
+      const lines = ['domain,ip,updated_at'];
       for (const row of historyResult.rows) {
-        lines.push(`${row.domain},${row.ip},${row.changed_at}`);
+        lines.push(`${row.domain},${row.ip},${row.updated_at}`);
       }
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename="ddns-ip-history.csv"');
@@ -368,7 +368,7 @@ router.get('/export-data', requireAuth, async (req: Request, res: Response) => {
         updated_at: d.updated_at,
         ip_history: historyResult.rows
           .filter((h: any) => h.domain === d.subdomain)
-          .map((h: any) => ({ ip: h.ip, changed_at: h.changed_at })),
+          .map((h: any) => ({ ip: h.ip, updated_at: h.updated_at })),
       })),
     };
 

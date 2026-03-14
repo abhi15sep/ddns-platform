@@ -346,14 +346,14 @@ r = session.post("https://api.devops-monk.com/auth/login", json={
       "webhook_url": null,
       "notify_email": false,
       "ip_history": [
-        { "ip": "203.0.113.42", "changed_at": "..." }
+        { "ip": "203.0.113.42", "updated_at": "..." }
       ]
     }
   ]
 }
 
 # CSV format (?format=csv)
-domain,ip,changed_at
+domain,ip,updated_at
 myhome,203.0.113.42,2026-03-14T12:00:00.000Z`,
     examples: {
       curl: `# Export as JSON
