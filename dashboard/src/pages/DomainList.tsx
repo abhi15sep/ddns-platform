@@ -49,16 +49,37 @@ function statusLabel(s: 'active' | 'stale' | 'never'): string {
 
 /* ---- SVG Icons for connectivity nodes ---- */
 const IconDevice = () => (
-  <svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="3" width="20" height="14" rx="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+  </svg>
 );
 const IconInternet = () => (
-  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <ellipse cx="12" cy="12" rx="4" ry="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M4.5 7h15M4.5 17h15" />
+  </svg>
 );
 const IconServer = () => (
-  <svg viewBox="0 0 24 24"><path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="2" width="18" height="8" rx="2" />
+    <rect x="3" y="14" width="18" height="8" rx="2" />
+    <circle cx="7" cy="6" r="1" fill="currentColor" />
+    <circle cx="7" cy="18" r="1" fill="currentColor" />
+    <line x1="11" y1="6" x2="17" y2="6" />
+    <line x1="11" y1="18" x2="17" y2="18" />
+  </svg>
 );
 const IconDNS = () => (
-  <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" />
+    <path d="M12 22V12" />
+    <path d="M21 7l-9 5-9-5" />
+    <path d="M3 17l9-5 9 5" />
+  </svg>
 );
 
 let toastId = 0;
@@ -267,21 +288,32 @@ export default function DomainList() {
         </div>
       )}
 
+      {/* Hero */}
+      <header style={{ textAlign: 'center', padding: '3rem 1rem 2rem', background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', color: 'white' }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', fontWeight: 800, color: 'white' }}>Dashboard</h1>
+        <p style={{ fontSize: '1.1rem', opacity: 0.9, maxWidth: '600px', margin: '0 auto' }}>
+          Manage your dynamic DNS domains, monitor connectivity, and track IP changes
+        </p>
+      </header>
+
       <div className="container">
         {/* Connectivity Diagram */}
         <div className="conn-card">
           <div className="conn-card-header">
             <span className="conn-card-title">Connectivity</span>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => runHealthChecks()}
-              title="Refresh status"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-                <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Auto-refreshes every 30s</span>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => runHealthChecks()}
+                title="Refresh now"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                  <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
               </svg>
-            </button>
+              </button>
+            </div>
           </div>
           <div className="conn-diagram">
             <div className="conn-node">

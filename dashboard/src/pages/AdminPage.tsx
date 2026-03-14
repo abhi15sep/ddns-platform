@@ -221,8 +221,15 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Hero */}
+      <header style={{ textAlign: 'center', padding: '3rem 1rem 2rem', background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', color: 'white' }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', fontWeight: 800, color: 'white' }}>Admin Console</h1>
+        <p style={{ fontSize: '1.1rem', opacity: 0.9, maxWidth: '600px', margin: '0 auto' }}>
+          Manage users, monitor activity, and configure platform settings
+        </p>
+      </header>
+
       <div className="container">
-        <h2 style={{ fontSize: '1.35rem', marginBottom: '1.5rem' }}>Admin Console</h2>
 
         {loading ? (
           <div className="loading">
