@@ -460,7 +460,7 @@ export default function DomainDetail() {
                   type="url"
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
-                  placeholder="https://discord.com/api/webhooks/... or any URL"
+                  placeholder="https://discord.com/api/webhooks/... or Telegram/Slack/any URL"
                   style={{
                     flex: 1,
                     padding: '0.65rem 0.75rem',
@@ -518,12 +518,65 @@ export default function DomainDetail() {
               )}
 
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <p style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Supported formats:</p>
-                <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <li><strong>Discord</strong> — Paste a Discord webhook URL. We auto-format the message.</li>
-                  <li><strong>Slack</strong> — Paste a Slack incoming webhook URL. We auto-format the message.</li>
-                  <li><strong>Custom</strong> — Any URL. We POST JSON: <code>{`{domain, old_ip, new_ip, timestamp}`}</code></li>
-                </ul>
+                <p style={{ marginBottom: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Supported platforms:</p>
+
+                {/* Discord */}
+                <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Discord</div>
+                  <ol style={{ paddingLeft: '1.25rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <li>Open your Discord server and go to <strong>Server Settings → Integrations → Webhooks</strong></li>
+                    <li>Click <strong>New Webhook</strong>, choose a channel, and give it a name</li>
+                    <li>Click <strong>Copy Webhook URL</strong></li>
+                    <li>Paste the URL above and click Save</li>
+                  </ol>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    URL format: <code>https://discord.com/api/webhooks/123.../abc...</code>
+                  </div>
+                </div>
+
+                {/* Telegram */}
+                <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Telegram</div>
+                  <ol style={{ paddingLeft: '1.25rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <li>Open Telegram and message <strong>@BotFather</strong></li>
+                    <li>Send <code>/newbot</code> and follow the prompts to create a bot</li>
+                    <li>Copy the <strong>bot token</strong> (e.g. <code>123456:ABC-DEF...</code>)</li>
+                    <li>Add the bot to your group or start a chat with it</li>
+                    <li>Get your <strong>chat ID</strong>: message your bot, then visit<br/>
+                      <code style={{ fontSize: '0.7rem' }}>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code><br/>
+                      and look for <code>"chat":{`{"id":`}</code> in the response</li>
+                    <li>Paste this URL above and click Save:</li>
+                  </ol>
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <code style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>https://api.telegram.org/bot&lt;BOT_TOKEN&gt;/sendMessage?chat_id=&lt;CHAT_ID&gt;</code>
+                  </div>
+                </div>
+
+                {/* Slack */}
+                <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Slack</div>
+                  <ol style={{ paddingLeft: '1.25rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <li>Go to <strong>api.slack.com/apps</strong> and create a new app (or use an existing one)</li>
+                    <li>Navigate to <strong>Incoming Webhooks</strong> and enable them</li>
+                    <li>Click <strong>Add New Webhook to Workspace</strong> and select a channel</li>
+                    <li>Copy the <strong>Webhook URL</strong></li>
+                    <li>Paste the URL above and click Save</li>
+                  </ol>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    URL format: <code>https://hooks.slack.com/services/T.../B.../xxx...</code>
+                  </div>
+                </div>
+
+                {/* Custom */}
+                <div style={{ padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Custom Webhook</div>
+                  <p style={{ margin: '0 0 0.35rem 0' }}>
+                    Any HTTP(S) endpoint. We send a <strong>POST</strong> request with JSON body:
+                  </p>
+                  <code style={{ fontSize: '0.75rem', display: 'block', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '4px', lineHeight: 1.5 }}>
+                    {`{ "domain": "myhost", "old_ip": "1.2.3.4", "new_ip": "5.6.7.8", "timestamp": "2025-..." }`}
+                  </code>
+                </div>
               </div>
             </div>
           </section>

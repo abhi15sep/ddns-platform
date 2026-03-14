@@ -8,8 +8,11 @@ async function fireWebhook(url: string, domain: string, oldIP: string, newIP: st
   const timestamp = new Date().toISOString();
   const isDiscord = url.includes('discord.com/api/webhooks');
   const isSlack = url.includes('hooks.slack.com');
+  const isTelegram = url.includes('api.telegram.org/bot');
 
   let body: string;
+  let fetchUrl = url;
+
   if (isDiscord) {
     body = JSON.stringify({
       content: `**DDNS Update** — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
@@ -18,6 +21,25 @@ async function fireWebhook(url: string, domain: string, oldIP: string, newIP: st
     body = JSON.stringify({
       text: `*DDNS Update* — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
     });
+  } else if (isTelegram) {
+    // Extract chat_id from query string: https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<ID>
+    const parsed = new URL(url);
+    const chatId = parsed.searchParams.get('chat_id');
+    if (!chatId) {
+      throw new Error('Telegram webhook URL missing chat_id parameter');
+    }
+    // Remove chat_id from URL since we send it in the body
+    parsed.searchParams.delete('chat_id');
+    // Ensure path ends with /sendMessage
+    if (!parsed.pathname.endsWith('/sendMessage')) {
+      parsed.pathname = parsed.pathname.replace(/\/?$/, '/sendMessage');
+    }
+    fetchUrl = parsed.toString();
+    body = JSON.stringify({
+      chat_id: chatId,
+      text: `*DDNS Update* — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
+      parse_mode: 'Markdown',
+    });
   } else {
     body = JSON.stringify({ domain, old_ip: oldIP, new_ip: newIP, timestamp });
   }
@@ -25,7 +47,7 @@ async function fireWebhook(url: string, domain: string, oldIP: string, newIP: st
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    await fetch(url, {
+    await fetch(fetchUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
