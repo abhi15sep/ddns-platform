@@ -13,3 +13,6 @@ client-app/out/
 # Database
 *.sql.bak
 /backups/
+
+# Root lock file (server & dashboard have their own)
+/package-lock.json
