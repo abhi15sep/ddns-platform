@@ -7,12 +7,12 @@ import { ThemeToggleButton } from '../App';
 type Lang = 'curl' | 'python' | 'javascript';
 
 interface Endpoint {
-  method: 'GET' | 'POST' | 'DELETE';
+  method: 'GET' | 'POST' | 'DELETE' | 'PUT';
   path: string;
   title: string;
   desc: string;
   auth: 'none' | 'cookie' | 'token';
-  params?: { name: string; in: 'query' | 'body' | 'path'; required: boolean; desc: string }[];
+  params?: { name: string; in: 'query' | 'body' | 'path' | 'header'; required: boolean; desc: string }[];
   response: string;
   examples: Record<Lang, string>;
 }
@@ -110,22 +110,35 @@ console.log(data); // {status: "ok", timestamp: "..."}`,
   }
 ]`,
     examples: {
-      curl: `curl -b cookies.txt https://api.devops-monk.com/api/domains`,
+      curl: `# Using API token (recommended for scripts)
+curl -H "Authorization: Bearer YOUR_API_TOKEN" \\
+  https://api.devops-monk.com/api/domains
+
+# Using session cookie (browser/session-based)
+curl -b cookies.txt https://api.devops-monk.com/api/domains`,
       python: `import requests
 
+# Using API token (recommended)
+r = requests.get("https://api.devops-monk.com/api/domains",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
+print(r.json())
+
+# Using session cookie
 session = requests.Session()
-# Login first
 session.post("https://api.devops-monk.com/auth/login", json={
-    "email": "you@example.com",
-    "password": "your-password"
+    "email": "you@example.com", "password": "your-password"
 })
-# Then list domains
-r = session.get("https://api.devops-monk.com/api/domains")
-print(r.json())`,
-      javascript: `const res = await fetch("https://api.devops-monk.com/api/domains", {
-  credentials: "include"
+r = session.get("https://api.devops-monk.com/api/domains")`,
+      javascript: `// Using API token (recommended for scripts)
+const res = await fetch("https://api.devops-monk.com/api/domains", {
+  headers: { "Authorization": "Bearer YOUR_API_TOKEN" }
 });
-const domains = await res.json();`,
+const domains = await res.json();
+
+// Using session cookie (browser)
+const res2 = await fetch("https://api.devops-monk.com/api/domains", {
+  credentials: "include"
+});`,
     },
   },
   {
@@ -147,16 +160,18 @@ const domains = await res.json();`,
     examples: {
       curl: `curl -X POST https://api.devops-monk.com/api/domains \\
   -H "Content-Type: application/json" \\
-  -b cookies.txt \\
+  -H "Authorization: Bearer YOUR_API_TOKEN" \\
   -d '{"subdomain": "myhome"}'`,
-      python: `r = session.post("https://api.devops-monk.com/api/domains", json={
-    "subdomain": "myhome"
-})
+      python: `r = requests.post("https://api.devops-monk.com/api/domains",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"},
+    json={"subdomain": "myhome"})
 print(r.json())  # New domain with token`,
       javascript: `const res = await fetch("https://api.devops-monk.com/api/domains", {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
-  credentials: "include",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_TOKEN"
+  },
   body: JSON.stringify({ subdomain: "myhome" })
 });`,
     },
@@ -173,12 +188,13 @@ print(r.json())  # New domain with token`,
     response: `{ "ok": true }`,
     examples: {
       curl: `curl -X DELETE https://api.devops-monk.com/api/domains/myhome \\
-  -b cookies.txt`,
-      python: `r = session.delete("https://api.devops-monk.com/api/domains/myhome")
+  -H "Authorization: Bearer YOUR_API_TOKEN"`,
+      python: `r = requests.delete("https://api.devops-monk.com/api/domains/myhome",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
 print(r.json())  # {"ok": true}`,
       javascript: `await fetch("https://api.devops-monk.com/api/domains/myhome", {
   method: "DELETE",
-  credentials: "include"
+  headers: { "Authorization": "Bearer YOUR_API_TOKEN" }
 });`,
     },
   },
@@ -199,12 +215,13 @@ print(r.json())  # {"ok": true}`,
 }`,
     examples: {
       curl: `curl -X POST https://api.devops-monk.com/api/domains/myhome/regenerate-token \\
-  -b cookies.txt`,
-      python: `r = session.post("https://api.devops-monk.com/api/domains/myhome/regenerate-token")
+  -H "Authorization: Bearer YOUR_API_TOKEN"`,
+      python: `r = requests.post("https://api.devops-monk.com/api/domains/myhome/regenerate-token",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
 new_token = r.json()["token"]`,
       javascript: `const res = await fetch(
   "https://api.devops-monk.com/api/domains/myhome/regenerate-token",
-  { method: "POST", credentials: "include" }
+  { method: "POST", headers: { "Authorization": "Bearer YOUR_API_TOKEN" } }
 );
 const { token } = await res.json();`,
     },
@@ -227,13 +244,15 @@ const { token } = await res.json();`,
   }
 ]`,
     examples: {
-      curl: `curl -b cookies.txt https://api.devops-monk.com/api/domains/myhome/history`,
-      python: `r = session.get("https://api.devops-monk.com/api/domains/myhome/history")
+      curl: `curl -H "Authorization: Bearer YOUR_API_TOKEN" \\
+  https://api.devops-monk.com/api/domains/myhome/history`,
+      python: `r = requests.get("https://api.devops-monk.com/api/domains/myhome/history",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
 for entry in r.json():
     print(f"{entry['updated_at']}: {entry['ip']}")`,
       javascript: `const res = await fetch(
   "https://api.devops-monk.com/api/domains/myhome/history",
-  { credentials: "include" }
+  { headers: { "Authorization": "Bearer YOUR_API_TOKEN" } }
 );
 const history = await res.json();`,
     },
@@ -348,8 +367,8 @@ function AuthBadge({ auth }: { auth: string }) {
   if (auth === 'none')
     return <span style={{ fontSize: '0.75rem', color: 'var(--badge-active-text)' }}>Public</span>;
   if (auth === 'token')
-    return <span style={{ fontSize: '0.75rem', color: 'var(--badge-stale-text)' }}>Token (query param)</span>;
-  return <span style={{ fontSize: '0.75rem', color: 'var(--accent-text)' }}>Session Cookie</span>;
+    return <span style={{ fontSize: '0.75rem', color: 'var(--badge-stale-text)' }}>Domain Token</span>;
+  return <span style={{ fontSize: '0.75rem', color: 'var(--accent-text)' }}>API Token / Cookie</span>;
 }
 
 export default function ApiDocsPage() {
@@ -445,13 +464,13 @@ export default function ApiDocsPage() {
           <div className="info-card">
             <h3>Authentication</h3>
             <div className="info-value" style={{ fontSize: '0.85rem', fontWeight: 400 }}>
-              Session cookie or domain token
+              API token, session cookie, or domain token
             </div>
           </div>
           <div className="info-card">
             <h3>Rate Limits</h3>
             <div className="info-value" style={{ fontSize: '0.85rem', fontWeight: 400 }}>
-              6 updates/min per domain
+              100 req/min global, 6 updates/min per domain
             </div>
           </div>
           <div className="info-card">
@@ -467,19 +486,25 @@ export default function ApiDocsPage() {
           <div className="section-label">Authentication</div>
           <div className="info-card" style={{ lineHeight: 1.7 }}>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-              The API uses two authentication methods:
+              The API supports three authentication methods:
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <span style={{ background: 'var(--badge-stale-bg)', color: 'var(--badge-stale-text)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', marginTop: '0.15rem' }}>Token</span>
+                <span style={{ background: 'var(--badge-stale-bg)', color: 'var(--badge-stale-text)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', marginTop: '0.15rem' }}>Domain Token</span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Used for the <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.8rem' }}>/update</code> endpoint. Pass your domain token as a query parameter. Each domain has its own token — find it in your dashboard.
+                  Used for the <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.8rem' }}>/update</code> endpoint only. Pass your domain-specific token as a query parameter. Each domain has its own token — find it in your dashboard.
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <span style={{ background: 'var(--accent-bg)', color: 'var(--accent-text)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', marginTop: '0.15rem' }}>Cookie</span>
+                <span style={{ background: 'var(--accent-bg)', color: 'var(--accent-text)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', marginTop: '0.15rem' }}>API Token</span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Used for all other API endpoints. Login via <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.8rem' }}>/auth/login</code> to receive an httpOnly session cookie (valid for 7 days).
+                  <strong>Recommended for scripts and programmatic access.</strong> Get your personal API token from your <a href="/profile" style={{ color: 'var(--accent-text)' }}>Profile page</a>. Send it as an <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.8rem' }}>Authorization: Bearer &lt;YOUR_API_TOKEN&gt;</code> header. Works with all authenticated endpoints.
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <span style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', marginTop: '0.15rem' }}>Session Cookie</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  Used by the web dashboard internally. Login via <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.8rem' }}>/auth/login</code> to receive an httpOnly cookie (valid for 7 days). The cookie is set automatically and sent with every browser request — you don't need to manage it manually. For scripts, use the API token instead.
                 </span>
               </div>
             </div>
@@ -604,7 +629,7 @@ export default function ApiDocsPage() {
           <div className="section-label">Rate Limits</div>
           <div className="info-card">
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem' }}>
-              The <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.8rem' }}>/update</code> endpoint is rate limited to prevent abuse:
+              All API endpoints are rate limited to prevent abuse. Exceeding any limit returns a <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.8rem' }}>429</code> status.
             </p>
             <table className="domain-table" style={{ fontSize: '0.85rem' }}>
               <thead>
@@ -616,24 +641,29 @@ export default function ApiDocsPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>Per domain</strong></td>
-                  <td>6 requests / 60s</td>
-                  <td>Each subdomain can be updated up to 6 times per minute</td>
-                </tr>
-                <tr>
-                  <td><strong>Per account</strong></td>
-                  <td>15 requests / 60s</td>
-                  <td>Total updates across all your domains per minute</td>
+                  <td><strong>Global (per IP)</strong></td>
+                  <td>100 requests / 60s</td>
+                  <td>Applies to all endpoints across the entire API per IP address</td>
                 </tr>
                 <tr>
                   <td><strong>Auth endpoints</strong></td>
                   <td>5 requests / 60s</td>
-                  <td>Login and register are rate limited per IP</td>
+                  <td>Login, register, password reset — stricter limit per IP</td>
+                </tr>
+                <tr>
+                  <td><strong>Per domain (update)</strong></td>
+                  <td>6 requests / 60s</td>
+                  <td>Each subdomain can be updated up to 6 times per minute</td>
+                </tr>
+                <tr>
+                  <td><strong>Per account (update)</strong></td>
+                  <td>15 requests / 60s</td>
+                  <td>Total updates across all your domains per minute</td>
                 </tr>
               </tbody>
             </table>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-              A 5-minute update interval is recommended. There's no need to call more frequently — your ISP rarely changes your IP faster than that.
+              A 5-minute update interval is recommended for DNS updates. Rate limit headers (<code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.75rem' }}>RateLimit-Limit</code>, <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.75rem' }}>RateLimit-Remaining</code>, <code style={{ background: 'var(--bg-secondary)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.75rem' }}>RateLimit-Reset</code>) are included in every response.
             </p>
           </div>
         </section>
