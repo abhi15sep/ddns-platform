@@ -252,11 +252,6 @@ export default function DownloadsPage() {
             </a>
           ))}
         </div>
-        <p className="dl-note">
-          All binaries are built from{' '}
-          <a href="https://github.com/devops-monk/ddns" target="_blank" rel="noreferrer">open source code</a>.
-          Windows build coming soon. Version 1.0.0.
-        </p>
       </section>
 
       {/* Quick Setup */}
