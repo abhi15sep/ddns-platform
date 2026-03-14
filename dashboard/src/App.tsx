@@ -13,6 +13,8 @@ import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
 import ApiDocsPage from './pages/ApiDocsPage';
 import StatusPage from './pages/StatusPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 interface ThemeContextType {
   theme: 'light' | 'dark';
@@ -112,6 +114,15 @@ export default function App() {
             </PublicOnlyRoute>
           }
         />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicOnlyRoute>
+              <ForgotPasswordPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/downloads" element={<DownloadsPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/api-docs" element={<ApiDocsPage />} />

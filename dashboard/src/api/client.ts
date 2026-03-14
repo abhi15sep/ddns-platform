@@ -46,6 +46,12 @@ export const regenerateApiToken = () => api.post('/auth/api-token/regenerate');
 
 export const deleteAccount = () => api.delete('/auth/account');
 
+export const forgotPassword = (email: string) =>
+  api.post('/auth/forgot-password', { email });
+
+export const resetPassword = (token: string, password: string) =>
+  api.post('/auth/reset-password', { token, password });
+
 // Admin
 export const checkAdmin = () => api.get('/api/admin/check');
 export const getAdminStats = () => api.get('/api/admin/stats');

@@ -63,6 +63,9 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <p className="auth-switch" style={{ marginBottom: '0.5rem' }}>
+          <Link to="/forgot-password">Forgot your password?</Link>
+        </p>
         <p className="auth-switch">
           No account? <Link to="/register">Register</Link>
         </p>
