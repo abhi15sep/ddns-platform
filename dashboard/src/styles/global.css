@@ -463,6 +463,26 @@ a:hover {
   font-size: 0.875rem;
 }
 
+/* ===== HINT BANNER ===== */
+.hint-banner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: #1e40af;
+  line-height: 1.6;
+}
+.hint-banner strong {
+  color: #1e3a8a;
+}
+.hint-banner .code-block {
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
 /* ===== DOMAIN CARDS ===== */
 .domain-cards {
   display: flex;

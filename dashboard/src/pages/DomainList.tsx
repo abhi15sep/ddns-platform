@@ -96,9 +96,9 @@ export default function DomainList() {
   }
 
   function copyUpdateURL(d: Domain) {
-    const url = `https://api.devops-monk.com/update?domain=${d.subdomain}&token=${d.token}`;
+    const url = `curl "https://api.devops-monk.com/update?domain=${d.subdomain}&token=${d.token}"`;
     navigator.clipboard.writeText(url);
-    addToast('Update URL copied to clipboard', 'success');
+    addToast('curl command copied — run it to activate your domain', 'success');
   }
 
   function copyIP(ip: string) {
@@ -219,6 +219,20 @@ export default function DomainList() {
             {error && <div className="error-message" style={{ marginTop: '0.75rem' }}>{error}</div>}
           </div>
         </section>
+
+        {/* Getting started hint */}
+        {domains.length > 0 && domains.some((d) => !d.current_ip) && (
+          <div className="hint-banner">
+            <strong>Next step:</strong> Your domain won't resolve until you send the first IP update.
+            Run this curl command from the machine whose IP you want to track:
+            <div className="code-block" style={{ marginTop: '0.5rem' }}>
+              <code>curl "https://api.devops-monk.com/update?domain=YOUR_SUBDOMAIN&token=YOUR_TOKEN"</code>
+            </div>
+            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+              Click the link icon on any domain below to copy its curl command, or click the domain name for full setup guides.
+            </span>
+          </div>
+        )}
 
         {/* Domain list */}
         <section>

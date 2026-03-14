@@ -502,7 +502,7 @@ export default function DomainDetail() {
 
         {/* Footer */}
         <footer className="footer">
-          DDNS Service &middot; <a href="/docs">API Documentation</a>
+          DDNS Service &middot; <a href="/downloads">Downloads &amp; Setup Guides</a>
         </footer>
       </div>
     </>
