@@ -1,0 +1,86 @@
+import { Router, Request, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import { pool } from '../db.js';
+import { deleteDNSRecord } from '../powerdns.js';
+import { requireAuth } from '../middleware/requireAuth.js';
+
+const router = Router();
+router.use(requireAuth);
+
+// List all domains for logged-in user
+router.get('/', async (req: Request, res: Response) => {
+  const result = await pool.query(
+    'SELECT * FROM domains WHERE user_id=$1 ORDER BY created_at DESC',
+    [req.user!.sub]
+  );
+  res.json(result.rows);
+});
+
+// Create a new subdomain
+router.post('/', async (req: Request, res: Response) => {
+  const { subdomain } = req.body;
+  if (!subdomain || !/^[a-z0-9-]{3,63}$/.test(subdomain)) {
+    res.status(400).json({ error: 'Invalid subdomain (3-63 chars, lowercase alphanumeric and hyphens)' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO domains (user_id, subdomain, token)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [req.user!.sub, subdomain, uuidv4()]
+    );
+    res.json(result.rows[0]);
+  } catch (err: any) {
+    if (err.code === '23505') {
+      res.status(409).json({ error: 'Subdomain already taken' });
+      return;
+    }
+    throw err;
+  }
+});
+
+// Delete a subdomain
+router.delete('/:subdomain', async (req: Request, res: Response) => {
+  const { subdomain } = req.params;
+  const result = await pool.query(
+    'DELETE FROM domains WHERE subdomain=$1 AND user_id=$2 RETURNING *',
+    [subdomain, req.user!.sub]
+  );
+  if (!result.rows.length) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  try {
+    await deleteDNSRecord(subdomain);
+  } catch (err) {
+    console.error('Failed to delete DNS record:', err);
+  }
+  res.json({ ok: true });
+});
+
+// Regenerate token
+router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) => {
+  const result = await pool.query(
+    'UPDATE domains SET token=$1 WHERE subdomain=$2 AND user_id=$3 RETURNING *',
+    [uuidv4(), req.params.subdomain, req.user!.sub]
+  );
+  if (!result.rows.length) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  res.json(result.rows[0]);
+});
+
+// Get update history
+router.get('/:subdomain/history', async (req: Request, res: Response) => {
+  const { limit = '100', offset = '0' } = req.query;
+  const result = await pool.query(
+    `SELECT ip, source_ip, user_agent, updated_at FROM update_log
+     WHERE domain=$1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3`,
+    [req.params.subdomain, Math.min(Number(limit), 500), Number(offset)]
+  );
+  res.json(result.rows);
+});
+
+export default router;

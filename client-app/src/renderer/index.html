@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DDNS Client</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fa; color: #1a1a1a; padding: 1.5rem;
+    }
+    h1 { font-size: 1.25rem; margin-bottom: 1rem; text-align: center; }
+    h2 { font-size: 1rem; margin-bottom: 0.75rem; color: #4f46e5; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .status-card {
+      background: white; padding: 1.25rem; border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem;
+    }
+    .status-indicator {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      margin-right: 0.5rem;
+    }
+    .status-green { background: #22c55e; }
+    .status-yellow { background: #eab308; }
+    .status-red { background: #ef4444; }
+
+    .stat { margin-bottom: 0.5rem; }
+    .stat-label { font-size: 0.75rem; color: #666; text-transform: uppercase; }
+    .stat-value { font-size: 1.1rem; font-weight: 600; }
+
+    input, select {
+      width: 100%; padding: 0.6rem; border: 1px solid #ddd;
+      border-radius: 6px; font-size: 0.875rem; margin-bottom: 0.75rem;
+    }
+    label { display: block; font-size: 0.875rem; margin-bottom: 0.25rem; color: #333; }
+
+    .btn {
+      display: inline-block; padding: 0.6rem 1.25rem; border: none;
+      border-radius: 6px; cursor: pointer; font-size: 0.875rem;
+      font-weight: 500; width: 100%; margin-bottom: 0.5rem;
+    }
+    .btn-primary { background: #4f46e5; color: white; }
+    .btn-secondary { background: #e5e5e5; color: #333; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn:hover { opacity: 0.9; }
+
+    .nav {
+      display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid #e5e5e5;
+    }
+    .nav-btn {
+      flex: 1; padding: 0.5rem; text-align: center; border: none; background: none;
+      cursor: pointer; font-size: 0.8rem; color: #666; border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+    .nav-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 600; }
+
+    .domain-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;
+    }
+    .domain-item:last-child { border: none; }
+
+    .toggle-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0;
+    }
+
+    .message { padding: 0.5rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+    .message-success { background: #f0fdf4; color: #16a34a; }
+    .message-error { background: #fef2f2; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <h1>DDNS Client</h1>
+
+  <!-- Setup page (shown when not configured) -->
+  <div id="setup-page" class="page">
+    <div class="status-card">
+      <h2>Setup</h2>
+      <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">
+        Enter your DDNS server URL and add at least one domain to get started.
+      </p>
+
+      <label for="setup-url">Server URL</label>
+      <input id="setup-url" type="url" placeholder="https://api.devops-monk.com" />
+
+      <label for="setup-subdomain">Subdomain</label>
+      <input id="setup-subdomain" type="text" placeholder="myhome" />
+
+      <label for="setup-token">Token</label>
+      <input id="setup-token" type="text" placeholder="Paste token from dashboard" />
+
+      <div id="setup-message"></div>
+
+      <button class="btn btn-primary" onclick="saveSetup()">Save & Start</button>
+    </div>
+  </div>
+
+  <!-- Main pages (shown when configured) -->
+  <div id="main-pages" style="display:none;">
+    <div class="nav">
+      <button class="nav-btn active" onclick="showPage('status')">Status</button>
+      <button class="nav-btn" onclick="showPage('domains')">Domains</button>
+      <button class="nav-btn" onclick="showPage('settings')">Settings</button>
+    </div>
+
+    <!-- Status page -->
+    <div id="status-page" class="page active">
+      <div class="status-card">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+          <span id="status-dot" class="status-indicator status-green"></span>
+          <span id="status-text" style="font-weight: 500;">Connected</span>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">Current IP</div>
+          <div class="stat-value" id="current-ip">---</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Last Updated</div>
+          <div class="stat-value" id="last-update">Never</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Domains</div>
+          <div class="stat-value" id="domain-count">0</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="handleCheckNow()">Check Now</button>
+      <div id="check-message"></div>
+    </div>
+
+    <!-- Domains page -->
+    <div id="domains-page" class="page">
+      <div class="status-card">
+        <h2>Managed Domains</h2>
+        <div id="domain-list"></div>
+      </div>
+
+      <div class="status-card">
+        <h2>Add Domain</h2>
+        <label for="new-subdomain">Subdomain</label>
+        <input id="new-subdomain" type="text" placeholder="subdomain" />
+        <label for="new-token">Token</label>
+        <input id="new-token" type="text" placeholder="Token from dashboard" />
+        <button class="btn btn-primary" onclick="addDomain()">Add Domain</button>
+      </div>
+    </div>
+
+    <!-- Settings page -->
+    <div id="settings-page" class="page">
+      <div class="status-card">
+        <h2>Settings</h2>
+
+        <label for="server-url">Server URL</label>
+        <input id="server-url" type="url" placeholder="https://api.devops-monk.com" />
+
+        <label for="update-interval">Update Interval</label>
+        <select id="update-interval">
+          <option value="1">Every 1 minute</option>
+          <option value="2">Every 2 minutes</option>
+          <option value="5" selected>Every 5 minutes</option>
+          <option value="10">Every 10 minutes</option>
+          <option value="30">Every 30 minutes</option>
+        </select>
+
+        <div class="toggle-row">
+          <span>Start on boot</span>
+          <input type="checkbox" id="start-on-boot" onchange="toggleBoot()" />
+        </div>
+        <div class="toggle-row">
+          <span>Show notifications</span>
+          <input type="checkbox" id="show-notifications" checked onchange="toggleNotifications()" />
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()" style="margin-top: 1rem;">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Page navigation
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(name + '-page').classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // Initialize
+    async function init() {
+      const status = await window.ddns.getStatus();
+
+      if (!status.isConfigured) {
+        document.getElementById('setup-page').classList.add('active');
+        document.getElementById('main-pages').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('setup-page').classList.remove('active');
+      document.getElementById('main-pages').style.display = 'block';
+
+      updateStatusDisplay(status);
+      updateDomainList(status.domains || []);
+      await loadSettings();
+    }
+
+    function updateStatusDisplay(status) {
+      document.getElementById('current-ip').textContent = status.ip || '---';
+      document.getElementById('last-update').textContent =
+        status.lastUpdate ? new Date(status.lastUpdate).toLocaleString() : 'Never';
+      document.getElementById('domain-count').textContent =
+        (status.domains || []).length.toString();
+    }
+
+    function updateDomainList(domains) {
+      const list = document.getElementById('domain-list');
+      if (!domains.length) {
+        list.innerHTML = '<p style="color:#999;font-size:0.85rem;">No domains configured</p>';
+        return;
+      }
+      list.innerHTML = domains.map((d, i) => `
+        <div class="domain-item">
+          <span>${d.subdomain}</span>
+          <button class="btn btn-danger" style="width:auto;padding:0.25rem 0.5rem;font-size:0.75rem;"
+            onclick="removeDomain(${i})">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    async function loadSettings() {
+      const config = await window.ddns.getConfig();
+      document.getElementById('server-url').value = config.serverUrl || '';
+      document.getElementById('update-interval').value = (config.updateInterval || 5).toString();
+      document.getElementById('start-on-boot').checked = config.startOnBoot || false;
+      document.getElementById('show-notifications').checked = config.showNotifications !== false;
+    }
+
+    // Setup
+    async function saveSetup() {
+      const url = document.getElementById('setup-url').value.trim();
+      const subdomain = document.getElementById('setup-subdomain').value.trim();
+      const token = document.getElementById('setup-token').value.trim();
+      const msgEl = document.getElementById('setup-message');
+
+      if (!url || !subdomain || !token) {
+        msgEl.innerHTML = '<div class="message message-error">All fields are required</div>';
+        return;
+      }
+
+      await window.ddns.setConfig('serverUrl', url);
+      await window.ddns.setConfig('domains', [{ subdomain, token }]);
+
+      msgEl.innerHTML = '<div class="message message-success">Saved! Starting updates...</div>';
+      setTimeout(() => init(), 1000);
+    }
+
+    // Domains
+    async function addDomain() {
+      const subdomain = document.getElementById('new-subdomain').value.trim();
+      const token = document.getElementById('new-token').value.trim();
+      if (!subdomain || !token) return;
+
+      const config = await window.ddns.getConfig();
+      const domains = config.domains || [];
+      domains.push({ subdomain, token });
+      await window.ddns.setConfig('domains', domains);
+
+      document.getElementById('new-subdomain').value = '';
+      document.getElementById('new-token').value = '';
+      updateDomainList(domains);
+    }
+
+    async function removeDomain(index) {
+      const config = await window.ddns.getConfig();
+      const domains = config.domains || [];
+      domains.splice(index, 1);
+      await window.ddns.setConfig('domains', domains);
+      updateDomainList(domains);
+    }
+
+    // Settings
+    async function saveSettings() {
+      const url = document.getElementById('server-url').value.trim();
+      const interval = parseInt(document.getElementById('update-interval').value);
+      await window.ddns.setConfig('serverUrl', url);
+      await window.ddns.setConfig('updateInterval', interval);
+    }
+
+    async function toggleBoot() {
+      const checked = document.getElementById('start-on-boot').checked;
+      await window.ddns.setConfig('startOnBoot', checked);
+    }
+
+    async function toggleNotifications() {
+      const checked = document.getElementById('show-notifications').checked;
+      await window.ddns.setConfig('showNotifications', checked);
+    }
+
+    async function handleCheckNow() {
+      const msgEl = document.getElementById('check-message');
+      msgEl.innerHTML = '<div class="message message-success">Checking...</div>';
+      await window.ddns.checkNow();
+      setTimeout(async () => {
+        const status = await window.ddns.getStatus();
+        updateStatusDisplay(status);
+        msgEl.innerHTML = '<div class="message message-success">Updated!</div>';
+        setTimeout(() => { msgEl.innerHTML = ''; }, 2000);
+      }, 1500);
+    }
+
+    // Listen for updates from main process
+    window.ddns.onStatusUpdate((data) => {
+      updateStatusDisplay(data);
+    });
+
+    init();
+  </script>
+</body>
+</html>

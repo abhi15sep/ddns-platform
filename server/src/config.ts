@@ -1,0 +1,25 @@
+import dotenv from 'dotenv';
+import { z } from 'zod';
+
+dotenv.config({ path: '../.env' });
+
+const envSchema = z.object({
+  PORT: z.string().default('3000'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  DATABASE_URL: z.string().url(),
+  PDNS_API_URL: z.string().url(),
+  PDNS_API_KEY: z.string().min(1),
+  DDNS_ZONE: z.string().min(1),
+  JWT_SECRET: z.string().min(16),
+  APP_URL: z.string().url().default('http://localhost:5173'),
+  API_URL: z.string().url().default('http://localhost:3000'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  MICROSOFT_CLIENT_ID: z.string().optional(),
+  MICROSOFT_CLIENT_SECRET: z.string().optional(),
+  MICROSOFT_TENANT_ID: z.string().default('common'),
+});
+
+export const config = envSchema.parse(process.env);
