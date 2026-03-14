@@ -69,22 +69,42 @@ export default function HowItWorksPage() {
             to your home devices from outside.
           </p>
 
-          <div style={styles.problemGrid}>
-            <div style={styles.problemCard}>
-              <div style={styles.problemIcon}>🏠</div>
-              <h3 style={styles.problemTitle}>Monday</h3>
-              <p style={styles.problemDesc}>Your home IP is <code style={styles.code}>98.51.100.42</code></p>
-            </div>
-            <div style={styles.problemCard}>
-              <div style={styles.problemIcon}>🔄</div>
-              <h3 style={styles.problemTitle}>Wednesday</h3>
-              <p style={styles.problemDesc}>ISP changes it to <code style={styles.code}>203.0.113.77</code></p>
-            </div>
-            <div style={styles.problemCard}>
-              <div style={styles.problemIcon}>❌</div>
-              <h3 style={styles.problemTitle}>Result</h3>
-              <p style={styles.problemDesc}>Your bookmarked IP no longer works!</p>
-            </div>
+          {/* Problem SVG */}
+          <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflowX: 'auto' }}>
+            <svg viewBox="0 0 800 180" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'block' }}>
+              {/* Monday */}
+              <rect x="10" y="20" width="220" height="140" rx="12" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="2" />
+              <text x="120" y="50" textAnchor="middle" fill="#065f46" fontSize="13" fontWeight="700" fontFamily="system-ui">Monday</text>
+              <text x="120" y="85" textAnchor="middle" fontSize="28">🏠</text>
+              <rect x="40" y="102" width="160" height="26" rx="6" fill="#d1fae5" />
+              <text x="120" y="120" textAnchor="middle" fill="#047857" fontSize="12" fontWeight="600" fontFamily="monospace">IP: 98.51.100.42</text>
+              <text x="120" y="148" textAnchor="middle" fill="#059669" fontSize="11" fontFamily="system-ui">✓ Everything works!</text>
+
+              {/* Arrow 1 */}
+              <text x="262" y="95" fill="#f59e0b" fontSize="24" fontWeight="700">→</text>
+              <text x="257" y="115" fill="#b45309" fontSize="9" fontFamily="system-ui">ISP changes</text>
+              <text x="257" y="126" fill="#b45309" fontSize="9" fontFamily="system-ui">your IP...</text>
+
+              {/* Wednesday */}
+              <rect x="300" y="20" width="220" height="140" rx="12" fill="#fffbeb" stroke="#fde68a" strokeWidth="2" />
+              <text x="410" y="50" textAnchor="middle" fill="#92400e" fontSize="13" fontWeight="700" fontFamily="system-ui">Wednesday</text>
+              <text x="410" y="85" textAnchor="middle" fontSize="28">🔄</text>
+              <rect x="330" y="102" width="160" height="26" rx="6" fill="#fef3c7" />
+              <text x="410" y="120" textAnchor="middle" fill="#b45309" fontSize="12" fontWeight="600" fontFamily="monospace">IP: 203.0.113.77</text>
+              <text x="410" y="148" textAnchor="middle" fill="#d97706" fontSize="11" fontFamily="system-ui">⚠ IP has changed!</text>
+
+              {/* Arrow 2 */}
+              <text x="552" y="95" fill="#dc2626" fontSize="24" fontWeight="700">→</text>
+              <text x="547" y="115" fill="#991b1b" fontSize="9" fontFamily="system-ui">You try the</text>
+              <text x="547" y="126" fill="#991b1b" fontSize="9" fontFamily="system-ui">old IP...</text>
+
+              {/* Result */}
+              <rect x="590" y="20" width="200" height="140" rx="12" fill="#fef2f2" stroke="#fecaca" strokeWidth="2" />
+              <text x="690" y="50" textAnchor="middle" fill="#991b1b" fontSize="13" fontWeight="700" fontFamily="system-ui">Result</text>
+              <text x="690" y="90" textAnchor="middle" fontSize="36">❌</text>
+              <text x="690" y="120" textAnchor="middle" fill="#dc2626" fontSize="12" fontWeight="600" fontFamily="system-ui">Connection failed!</text>
+              <text x="690" y="140" textAnchor="middle" fill="#991b1b" fontSize="10" fontFamily="system-ui">Old IP no longer works</text>
+            </svg>
           </div>
         </section>
 
@@ -241,60 +261,97 @@ export default function HowItWorksPage() {
           </div>
         </section>
 
-        {/* Full Picture Diagram */}
+        {/* Full Architecture SVG Diagram */}
         <section style={styles.section}>
           <h2 style={styles.sectionTitle}>The Full Picture</h2>
-          <div style={styles.fullDiagram}>
-            <div style={styles.fullRow}>
-              <div style={styles.fullBox}>
-                <div style={styles.fullBoxIcon}>🏠</div>
-                <div style={styles.fullBoxTitle}>Your Home Network</div>
-                <div style={styles.fullBoxItems}>
-                  <span style={styles.fullItem}>💻 Computer</span>
-                  <span style={styles.fullItem}>📱 Phone</span>
-                  <span style={styles.fullItem}>🖥️ NAS / Server</span>
-                  <span style={styles.fullItem}>📷 Security Camera</span>
-                </div>
-              </div>
+          <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflowX: 'auto' }}>
+            <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '900px', margin: '0 auto', display: 'block' }}>
+              <defs>
+                <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
+                </marker>
+                <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#059669" />
+                </marker>
+                <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b" />
+                </marker>
+                <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.08" />
+                </filter>
+              </defs>
 
-              <div style={styles.fullArrowContainer}>
-                <div style={styles.fullArrowLine} />
-                <span style={styles.fullArrowLabel}>All share one public IP</span>
-                <div style={styles.fullArrowHead}>▶</div>
-              </div>
+              {/* Home Network Box */}
+              <rect x="20" y="30" width="200" height="200" rx="14" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" filter="url(#shadow)" />
+              <rect x="20" y="30" width="200" height="36" rx="14" fill="#1e293b" />
+              <rect x="20" y="52" width="200" height="14" fill="#1e293b" />
+              <text x="120" y="54" textAnchor="middle" fill="white" fontSize="13" fontWeight="700" fontFamily="system-ui">Your Home Network</text>
+              {/* Devices */}
+              <rect x="40" y="80" width="160" height="32" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1" />
+              <text x="55" y="100" fontSize="14">💻</text>
+              <text x="75" y="101" fill="#475569" fontSize="12" fontFamily="system-ui">Computer</text>
+              <rect x="40" y="120" width="160" height="32" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1" />
+              <text x="55" y="140" fontSize="14">🖥️</text>
+              <text x="75" y="141" fill="#475569" fontSize="12" fontFamily="system-ui">NAS / Server</text>
+              <rect x="40" y="160" width="160" height="32" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1" />
+              <text x="55" y="180" fontSize="14">📷</text>
+              <text x="75" y="181" fill="#475569" fontSize="12" fontFamily="system-ui">Security Camera</text>
 
-              <div style={{...styles.fullBox, borderColor: '#f59e0b'}}>
-                <div style={styles.fullBoxIcon}>📡</div>
-                <div style={styles.fullBoxTitle}>Your Router</div>
-                <div style={styles.fullBoxItems}>
-                  <span style={styles.fullItem}>Public IP: 98.51.100.42</span>
-                  <span style={{...styles.fullItem, color: '#dc2626'}}>⚠️ Changes periodically</span>
-                </div>
-              </div>
+              {/* Arrow: Home → Router */}
+              <line x1="220" y1="130" x2="280" y2="130" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6,3" markerEnd="url(#arrowBlue)" />
+              <text x="250" y="118" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="system-ui">LAN</text>
 
-              <div style={styles.fullArrowContainer}>
-                <div style={styles.fullArrowLine} />
-                <span style={styles.fullArrowLabel}>Sends IP every 5 min</span>
-                <div style={styles.fullArrowHead}>▶</div>
-              </div>
+              {/* Router */}
+              <rect x="290" y="70" width="140" height="120" rx="14" fill="#fffbeb" stroke="#f59e0b" strokeWidth="2.5" filter="url(#shadow)" />
+              <text x="360" y="108" textAnchor="middle" fontSize="32">📡</text>
+              <text x="360" y="132" textAnchor="middle" fill="#92400e" fontSize="13" fontWeight="700" fontFamily="system-ui">Your Router</text>
+              <text x="360" y="150" textAnchor="middle" fill="#b45309" fontSize="10" fontFamily="monospace">IP: 98.51.100.42</text>
+              <text x="360" y="166" textAnchor="middle" fill="#dc2626" fontSize="9" fontFamily="system-ui">⚠ Changes periodically</text>
 
-              <div style={{...styles.fullBox, borderColor: '#4f46e5'}}>
-                <div style={styles.fullBoxIcon}>🌐</div>
-                <div style={styles.fullBoxTitle}>DDNS Server</div>
-                <div style={styles.fullBoxItems}>
-                  <span style={styles.fullItem}>Receives IP updates</span>
-                  <span style={styles.fullItem}>Updates DNS records</span>
-                  <span style={styles.fullItem}>Keeps history</span>
-                </div>
-              </div>
-            </div>
+              {/* Arrow: Router → DDNS Server */}
+              <line x1="430" y1="115" x2="510" y2="115" stroke="#4f46e5" strokeWidth="2.5" markerEnd="url(#arrowBlue)" />
+              <text x="470" y="105" textAnchor="middle" fill="#4f46e5" fontSize="9" fontWeight="600" fontFamily="system-ui">curl update</text>
+              <text x="470" y="132" textAnchor="middle" fill="#4f46e5" fontSize="8" fontFamily="system-ui">every 5 min</text>
 
-            <div style={styles.fullResultRow}>
-              <div style={styles.fullResultBox}>
-                <strong>Result:</strong> <code style={styles.code}>myhome.dyn.devops-monk.com</code> always points to your home —
-                even when the IP changes!
-              </div>
-            </div>
+              {/* DDNS Server */}
+              <rect x="520" y="50" width="160" height="140" rx="14" fill="#eef2ff" stroke="#4f46e5" strokeWidth="2.5" filter="url(#shadow)" />
+              <text x="600" y="88" textAnchor="middle" fontSize="28">🌐</text>
+              <text x="600" y="112" textAnchor="middle" fill="#312e81" fontSize="13" fontWeight="700" fontFamily="system-ui">DDNS Server</text>
+              <text x="600" y="130" textAnchor="middle" fill="#4338ca" fontSize="10" fontFamily="system-ui">Receives IP updates</text>
+              <text x="600" y="145" textAnchor="middle" fill="#4338ca" fontSize="10" fontFamily="system-ui">Updates DNS records</text>
+              <text x="600" y="160" textAnchor="middle" fill="#4338ca" fontSize="10" fontFamily="system-ui">Keeps history</text>
+
+              {/* Arrow: DDNS → DNS */}
+              <line x1="680" y1="120" x2="750" y2="120" stroke="#059669" strokeWidth="2.5" markerEnd="url(#arrowGreen)" />
+              <text x="715" y="108" textAnchor="middle" fill="#059669" fontSize="9" fontWeight="600" fontFamily="system-ui">updates</text>
+
+              {/* DNS System */}
+              <rect x="760" y="70" width="120" height="100" rx="14" fill="#ecfdf5" stroke="#059669" strokeWidth="2.5" filter="url(#shadow)" />
+              <text x="820" y="102" textAnchor="middle" fontSize="24">📋</text>
+              <text x="820" y="122" textAnchor="middle" fill="#064e3b" fontSize="12" fontWeight="700" fontFamily="system-ui">DNS System</text>
+              <text x="820" y="140" textAnchor="middle" fill="#047857" fontSize="9" fontFamily="monospace">myhome → IP</text>
+              <text x="820" y="155" textAnchor="middle" fill="#047857" fontSize="9" fontFamily="system-ui">Always current</text>
+
+              {/* Remote User at bottom */}
+              <rect x="520" y="280" width="160" height="100" rx="14" fill="#faf5ff" stroke="#7c3aed" strokeWidth="2.5" filter="url(#shadow)" />
+              <text x="600" y="318" textAnchor="middle" fontSize="28">💻</text>
+              <text x="600" y="342" textAnchor="middle" fill="#4c1d95" fontSize="13" fontWeight="700" fontFamily="system-ui">You (Remote)</text>
+              <text x="600" y="358" textAnchor="middle" fill="#6d28d9" fontSize="10" fontFamily="system-ui">From work, cafe, phone</text>
+
+              {/* Arrow: Remote → DNS */}
+              <path d="M 680 310 Q 820 310 820 175" fill="none" stroke="#7c3aed" strokeWidth="2" strokeDasharray="6,3" markerEnd="url(#arrowGreen)" />
+              <text x="770" y="268" fill="#7c3aed" fontSize="9" fontWeight="600" fontFamily="system-ui" transform="rotate(-40 770 268)">DNS lookup</text>
+
+              {/* Arrow: DNS → Home (curved) */}
+              <path d="M 760 145 Q 500 300 220 200" fill="none" stroke="#059669" strokeWidth="2.5" markerEnd="url(#arrowGreen)" />
+              <text x="470" y="265" textAnchor="middle" fill="#059669" fontSize="10" fontWeight="600" fontFamily="system-ui">Resolves to your home IP</text>
+
+              {/* Result banner */}
+              <rect x="180" y="380" width="540" height="36" rx="18" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1.5" />
+              <text x="450" y="403" textAnchor="middle" fill="#065f46" fontSize="12" fontWeight="600" fontFamily="system-ui">
+                Result: myhome.dyn.devops-monk.com always reaches your home!
+              </text>
+            </svg>
           </div>
         </section>
 
@@ -410,13 +467,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.85em',
   },
 
-  // Problem cards
-  problemGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginTop: '1.5rem' },
-  problemCard: { background: 'white', borderRadius: '12px', padding: '1.5rem', textAlign: 'center' as const, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
-  problemIcon: { fontSize: '2rem', marginBottom: '0.5rem' },
-  problemTitle: { fontSize: '1rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.35rem' },
-  problemDesc: { fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 },
-
   // Flow diagram
   flowContainer: { display: 'flex', flexDirection: 'column' as const, gap: '0' },
   flowStep: {
@@ -472,56 +522,6 @@ const styles: Record<string, React.CSSProperties> = {
   deviceLabel: { fontSize: '0.75rem', fontWeight: 600, color: '#1e293b' },
   deviceSub: { fontSize: '0.65rem', color: '#64748b', textAlign: 'center' as const },
   arrow: { fontSize: '1.5rem', color: '#94a3b8', fontWeight: 700 },
-
-  // Full diagram
-  fullDiagram: {
-    background: 'white',
-    borderRadius: '12px',
-    padding: '2rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-    border: '1px solid #f1f5f9',
-    overflowX: 'auto' as const,
-  },
-  fullRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-    flexWrap: 'wrap' as const,
-    marginBottom: '1.5rem',
-  },
-  fullBox: {
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '1.25rem',
-    textAlign: 'center' as const,
-    minWidth: '160px',
-    background: '#fafbfc',
-  },
-  fullBoxIcon: { fontSize: '2rem', marginBottom: '0.5rem' },
-  fullBoxTitle: { fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' },
-  fullBoxItems: { display: 'flex', flexDirection: 'column' as const, gap: '0.25rem' },
-  fullItem: { fontSize: '0.75rem', color: '#64748b' },
-  fullArrowContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.25rem',
-    flexDirection: 'column' as const,
-    padding: '0 0.25rem',
-  },
-  fullArrowLine: { width: '40px', height: '2px', background: '#cbd5e1' },
-  fullArrowLabel: { fontSize: '0.6rem', color: '#94a3b8', textAlign: 'center' as const, maxWidth: '80px' },
-  fullArrowHead: { color: '#cbd5e1', fontSize: '0.7rem', marginTop: '-0.25rem' },
-  fullResultRow: { textAlign: 'center' as const },
-  fullResultBox: {
-    display: 'inline-block',
-    background: '#ecfdf5',
-    border: '1px solid #a7f3d0',
-    borderRadius: '8px',
-    padding: '1rem 1.5rem',
-    fontSize: '0.9rem',
-    color: '#065f46',
-  },
 
   // Use cases
   useCaseGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' },
