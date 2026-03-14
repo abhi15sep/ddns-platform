@@ -394,6 +394,76 @@ const csv = await csvRes.text();`,
     },
   },
   {
+    method: 'GET',
+    path: '/auth/sessions',
+    title: 'List Active Sessions',
+    desc: 'Get all active login sessions for the authenticated user. Each session includes device info, IP, and timestamps.',
+    auth: 'cookie',
+    response: `[
+  {
+    "id": "uuid",
+    "ip": "203.0.113.42",
+    "user_agent": "Mozilla/5.0 ...",
+    "created_at": "2026-03-14T10:00:00.000Z",
+    "last_active": "2026-03-14T12:00:00.000Z",
+    "is_current": true
+  }
+]`,
+    examples: {
+      curl: `curl -H "Authorization: Bearer YOUR_API_TOKEN" \\
+  https://api.devops-monk.com/auth/sessions`,
+      python: `r = requests.get("https://api.devops-monk.com/auth/sessions",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
+for s in r.json():
+    print(f"{s['ip']} - {'Current' if s['is_current'] else 'Other'}")`,
+      javascript: `const res = await fetch("https://api.devops-monk.com/auth/sessions", {
+  headers: { "Authorization": "Bearer YOUR_API_TOKEN" }
+});
+const sessions = await res.json();`,
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/auth/sessions/:id',
+    title: 'Revoke Session',
+    desc: 'Revoke a specific session by ID. The user on that session will be logged out on their next request. Cannot revoke your current session.',
+    auth: 'cookie',
+    params: [
+      { name: 'id', in: 'path', required: true, desc: 'Session UUID to revoke' },
+    ],
+    response: `{ "ok": true }`,
+    examples: {
+      curl: `curl -X DELETE https://api.devops-monk.com/auth/sessions/SESSION_UUID \\
+  -H "Authorization: Bearer YOUR_API_TOKEN"`,
+      python: `r = requests.delete("https://api.devops-monk.com/auth/sessions/SESSION_UUID",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})`,
+      javascript: `await fetch("https://api.devops-monk.com/auth/sessions/SESSION_UUID", {
+  method: "DELETE",
+  headers: { "Authorization": "Bearer YOUR_API_TOKEN" }
+});`,
+    },
+  },
+  {
+    method: 'POST',
+    path: '/auth/sessions/logout-others',
+    title: 'Logout Other Sessions',
+    desc: 'Revoke all sessions except the current one. Users on those sessions will be logged out on their next request.',
+    auth: 'cookie',
+    response: `{ "ok": true, "revoked": 3 }`,
+    examples: {
+      curl: `curl -X POST https://api.devops-monk.com/auth/sessions/logout-others \\
+  -H "Authorization: Bearer YOUR_API_TOKEN"`,
+      python: `r = requests.post("https://api.devops-monk.com/auth/sessions/logout-others",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
+print(f"Revoked {r.json()['revoked']} sessions")`,
+      javascript: `const res = await fetch("https://api.devops-monk.com/auth/sessions/logout-others", {
+  method: "POST",
+  headers: { "Authorization": "Bearer YOUR_API_TOKEN" }
+});
+const { revoked } = await res.json();`,
+    },
+  },
+  {
     method: 'DELETE',
     path: '/auth/account',
     title: 'Delete Account',
