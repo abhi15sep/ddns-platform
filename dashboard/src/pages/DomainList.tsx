@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getDomains, createDomain, deleteDomain } from '../api/client';
+import { getDomains, createDomain, deleteDomain, checkAdmin } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeToggleButton } from '../App';
 
@@ -51,6 +51,7 @@ export default function DomainList() {
   const [newSub, setNewSub] = useState('');
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -64,6 +65,7 @@ export default function DomainList() {
 
   useEffect(() => {
     getDomains().then((r) => setDomains(r.data));
+    checkAdmin().then(() => setIsAdmin(true)).catch(() => {});
   }, []);
 
   async function handleCreate() {
@@ -140,6 +142,11 @@ export default function DomainList() {
             <Link to="/downloads" className="navbar-link">
               Downloads
             </Link>
+            {isAdmin && (
+              <Link to="/admin" className="navbar-link">
+                Admin
+              </Link>
+            )}
           </div>
           <div className="navbar-right">
             <Link to="/profile" className="navbar-email" style={{ cursor: 'pointer', color: 'var(--accent-text)' }}>

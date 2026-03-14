@@ -50,11 +50,14 @@ Your home internet IP changes frequently. This platform lets you (and your users
 - SSO login (Google, GitHub, Microsoft) plus email/password
 - A and AAAA records (IPv4 + IPv6)
 - Desktop client app for non-developers (Windows, macOS, Linux)
-- Unlimited subdomains per user
+- Up to 3 subdomains per user
 - Per-domain scoped tokens
-- Full IP change audit log
+- IP change history (last hour, auto-pruned)
 - DuckDNS-compatible update API (works with router firmware)
 - Rate limiting and abuse protection
+- Dark mode with system preference detection
+- Admin console — user management, activity monitoring, block/unblock users
+- Profile page with password change, API token, and account deletion
 
 ---
 
@@ -111,15 +114,17 @@ ddns-platform/
 │       ├── db.ts            # PostgreSQL connection
 │       ├── powerdns.ts      # PowerDNS REST API client
 │       ├── auth/passport.ts # OAuth + local auth strategies
-│       ├── middleware/      # JWT auth, error handling
-│       └── routes/          # health, auth, update, domains
+│       ├── middleware/      # JWT auth, error handling, admin check
+│       └── routes/          # health, auth, update, domains, admin
 │
 ├── dashboard/               # Web frontend (React + Vite + TypeScript)
 │   └── src/
 │       ├── App.tsx          # Route definitions
 │       ├── api/client.ts    # API calls to backend
 │       ├── hooks/useAuth.ts # Auth state management
-│       └── pages/           # Login, Register, DomainList, DomainDetail
+│       ├── hooks/useTheme.ts # Dark/light theme with localStorage
+│       └── pages/           # Login, Register, DomainList, DomainDetail,
+│                            # AdminPage, ProfilePage, HowItWorks, Downloads
 │
 ├── client-app/              # Desktop app (Electron) for non-developers
 │   └── src/
@@ -136,7 +141,8 @@ ddns-platform/
 │   ├── 001_create_users.sql
 │   ├── 002_create_oauth_accounts.sql
 │   ├── 003_create_domains.sql
-│   └── 004_create_update_log.sql
+│   ├── 004_create_update_log.sql
+│   └── 005_add_blocked_to_users.sql
 │
 ├── docs/                    # Detailed docs for each component
 ├── docker-compose.yml       # Dev databases (PostgreSQL, MySQL, PowerDNS)
@@ -220,7 +226,7 @@ npm install
 npm run migrate
 ```
 
-**What this does**: Creates the `users`, `oauth_accounts`, `domains`, and `update_log` tables in PostgreSQL.
+**What this does**: Creates the `users`, `oauth_accounts`, `domains`, and `update_log` tables in PostgreSQL, and adds the `blocked` column for user management.
 
 **If you get a connection error**: Wait 10 seconds for PostgreSQL to fully start, then try again.
 
@@ -519,6 +525,7 @@ sudo -u postgres psql -p PORT -d ddns -f db/migrations/001_create_users.sql
 sudo -u postgres psql -p PORT -d ddns -f db/migrations/002_create_oauth_accounts.sql
 sudo -u postgres psql -p PORT -d ddns -f db/migrations/003_create_domains.sql
 sudo -u postgres psql -p PORT -d ddns -f db/migrations/004_create_update_log.sql
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/005_add_blocked_to_users.sql
 ```
 
 **IMPORTANT — Grant permissions to ddnsuser** (the app user needs access to tables):
@@ -869,6 +876,25 @@ https://api.devops-monk.com/update?domain=SUBDOMAIN&token=TOKEN
 3. Enter server URL: `https://api.devops-monk.com`
 4. Paste your subdomain and token from the web dashboard
 5. The app runs in the background and keeps your IP updated automatically
+
+---
+
+## Admin Console
+
+The admin console is available at `/admin` for users with the `is_admin` flag set.
+
+**Setting up your admin account** (run on VPS):
+```bash
+sudo -u postgres psql -d ddns -c "UPDATE users SET is_admin = TRUE WHERE email = 'your-email@example.com';"
+```
+
+**Features**:
+- **Stats dashboard** — total users, total domains, updates in the last hour, blocked users
+- **User management** — search users by email, view their domains, block/unblock accounts
+- **Activity monitor** — see which domains have the most updates in the last hour, with abuse indicators (>20 updates/hour flagged as HIGH)
+- **Block/unblock** — blocked users cannot log in or update DNS records
+
+The admin link appears conditionally in the dashboard navbar only for admin users.
 
 ---
 
