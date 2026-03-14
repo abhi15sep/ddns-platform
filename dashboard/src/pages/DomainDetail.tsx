@@ -4,6 +4,7 @@ import {
   getDomains,
   getDomainHistory,
   regenerateToken,
+  updateWebhook,
 } from '../api/client';
 import {
   AreaChart,
@@ -22,6 +23,7 @@ interface Domain {
   current_ip: string | null;
   updated_at: string | null;
   token: string;
+  webhook_url: string | null;
 }
 
 interface HistoryEntry {
@@ -31,7 +33,7 @@ interface HistoryEntry {
   updated_at: string;
 }
 
-type TabName = 'update' | 'history' | 'setup';
+type TabName = 'update' | 'history' | 'setup' | 'notifications';
 
 interface Toast {
   id: number;
@@ -75,6 +77,8 @@ export default function DomainDetail() {
   const [showToken, setShowToken] = useState(false);
   const [activeTab, setActiveTab] = useState<TabName>('update');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookSaving, setWebhookSaving] = useState(false);
 
   const addToast = useCallback((message: string, type: 'success' | 'error') => {
     const id = ++toastIdCounter;
@@ -86,9 +90,11 @@ export default function DomainDetail() {
 
   useEffect(() => {
     if (!subdomain) return;
-    getDomains().then((r) =>
-      setDomain(r.data.find((d: Domain) => d.subdomain === subdomain) || null)
-    );
+    getDomains().then((r) => {
+      const found = r.data.find((d: Domain) => d.subdomain === subdomain) || null;
+      setDomain(found);
+      if (found) setWebhookUrl(found.webhook_url || '');
+    });
     getDomainHistory(subdomain).then((r) =>
       setHistory([...r.data].reverse())
     );
@@ -101,6 +107,20 @@ export default function DomainDetail() {
     const r = await regenerateToken(subdomain);
     setDomain(r.data);
     addToast('Token regenerated successfully', 'success');
+  }
+
+  async function handleSaveWebhook() {
+    if (!subdomain) return;
+    setWebhookSaving(true);
+    try {
+      const r = await updateWebhook(subdomain, webhookUrl.trim() || null);
+      setDomain(r.data);
+      addToast(webhookUrl.trim() ? 'Webhook saved' : 'Webhook removed', 'success');
+    } catch {
+      addToast('Failed to save webhook', 'error');
+    } finally {
+      setWebhookSaving(false);
+    }
   }
 
   function copyToClipboard(text: string, label: string) {
@@ -247,6 +267,12 @@ export default function DomainDetail() {
             onClick={() => setActiveTab('history')}
           >
             IP History ({history.length})
+          </button>
+          <button
+            className={`tab ${activeTab === 'notifications' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('notifications')}
+          >
+            Notifications
           </button>
           <button
             className={`tab ${activeTab === 'setup' ? 'tab-active' : ''}`}
@@ -417,6 +443,89 @@ export default function DomainDetail() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <section>
+            <div className="info-card">
+              <h3 style={{ marginBottom: '0.5rem' }}>Webhook Notification</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                Get notified when your IP address changes. We'll send a POST request to your webhook URL with the old and new IP.
+              </p>
+
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                <input
+                  type="url"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  placeholder="https://discord.com/api/webhooks/... or any URL"
+                  style={{
+                    flex: 1,
+                    padding: '0.65rem 0.75rem',
+                    border: '1px solid var(--border-input)',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleSaveWebhook}
+                  disabled={webhookSaving}
+                >
+                  {webhookSaving ? 'Saving...' : 'Save'}
+                </button>
+                {domain.webhook_url && (
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={async () => {
+                      setWebhookUrl('');
+                      setWebhookSaving(true);
+                      try {
+                        const r = await updateWebhook(subdomain!, null);
+                        setDomain(r.data);
+                        addToast('Webhook removed', 'success');
+                      } catch {
+                        addToast('Failed to remove webhook', 'error');
+                      } finally {
+                        setWebhookSaving(false);
+                      }
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {domain.webhook_url && (
+                <div style={{
+                  padding: '0.65rem 0.85rem',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--badge-active-text)', display: 'inline-block', flexShrink: 0 }} />
+                  Webhook active: {domain.webhook_url}
+                </div>
+              )}
+
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <p style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Supported formats:</p>
+                <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <li><strong>Discord</strong> — Paste a Discord webhook URL. We auto-format the message.</li>
+                  <li><strong>Slack</strong> — Paste a Slack incoming webhook URL. We auto-format the message.</li>
+                  <li><strong>Custom</strong> — Any URL. We POST JSON: <code>{`{domain, old_ip, new_ip, timestamp}`}</code></li>
+                </ul>
+              </div>
+            </div>
           </section>
         )}
 

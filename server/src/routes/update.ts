@@ -4,6 +4,38 @@ import { updateDNSRecord } from '../powerdns.js';
 
 const router = Router();
 
+async function fireWebhook(url: string, domain: string, oldIP: string, newIP: string) {
+  const timestamp = new Date().toISOString();
+  const isDiscord = url.includes('discord.com/api/webhooks');
+  const isSlack = url.includes('hooks.slack.com');
+
+  let body: string;
+  if (isDiscord) {
+    body = JSON.stringify({
+      content: `**DDNS Update** — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
+    });
+  } else if (isSlack) {
+    body = JSON.stringify({
+      text: `*DDNS Update* — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
+    });
+  } else {
+    body = JSON.stringify({ domain, old_ip: oldIP, new_ip: newIP, timestamp });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // Cache settings in memory, refresh every 30s
 let cachedSettings: { perToken: number; perAccount: number; windowSec: number } = {
   perToken: 6,
@@ -93,6 +125,8 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     const detectedIP = (ip as string) || detectIP(req);
+    const oldIP = result.rows[0].current_ip;
+    const webhookUrl = result.rows[0].webhook_url;
 
     // Validate IP (v4 or v6)
     const isV4 = IPV4_RE.test(detectedIP);
@@ -112,6 +146,13 @@ router.get('/', async (req: Request, res: Response) => {
       'UPDATE domains SET current_ip=$1, updated_at=NOW() WHERE subdomain=$2',
       [detectedIP, domain]
     );
+
+    // Fire webhook if IP changed and webhook is configured
+    if (webhookUrl && oldIP && oldIP !== detectedIP) {
+      fireWebhook(webhookUrl, domain as string, oldIP, detectedIP).catch((err) =>
+        console.error(`Webhook failed for ${domain}:`, err)
+      );
+    }
 
     // Log the update
     await pool.query(

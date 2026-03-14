@@ -31,6 +31,9 @@ export const regenerateToken = (subdomain: string) =>
 export const getDomainHistory = (subdomain: string) =>
   api.get(`/api/domains/${subdomain}/history`);
 
+export const updateWebhook = (subdomain: string, webhookUrl: string | null) =>
+  api.put(`/api/domains/${subdomain}/webhook`, { webhook_url: webhookUrl });
+
 // Profile
 export const getProfile = () => api.get('/auth/profile');
 

@@ -71,6 +71,35 @@ router.delete('/:subdomain', async (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+// Update webhook URL
+router.put('/:subdomain/webhook', async (req: Request, res: Response) => {
+  const { webhook_url } = req.body;
+
+  // Allow null/empty to clear, otherwise validate URL
+  if (webhook_url && typeof webhook_url === 'string' && webhook_url.trim()) {
+    try {
+      const url = new URL(webhook_url.trim());
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        res.status(400).json({ error: 'Webhook URL must use http or https' });
+        return;
+      }
+    } catch {
+      res.status(400).json({ error: 'Invalid URL format' });
+      return;
+    }
+  }
+
+  const result = await pool.query(
+    'UPDATE domains SET webhook_url=$1 WHERE subdomain=$2 AND user_id=$3 RETURNING *',
+    [webhook_url?.trim() || null, req.params.subdomain, (req.user as AuthUser).sub]
+  );
+  if (!result.rows.length) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  res.json(result.rows[0]);
+});
+
 // Regenerate token
 router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) => {
   const result = await pool.query(
