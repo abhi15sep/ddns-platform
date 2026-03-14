@@ -136,9 +136,6 @@ export default function DomainList() {
             <a href="/downloads" className="navbar-link">
               Downloads
             </a>
-            <a href="/docs" className="navbar-link">
-              API Docs
-            </a>
           </div>
           <div className="navbar-right">
             <span className="navbar-email">{user?.email}</span>
@@ -319,7 +316,7 @@ export default function DomainList() {
 
         {/* Footer */}
         <footer className="footer">
-          DDNS Service &middot; <a href="/docs">API Documentation</a>
+          DDNS Service &middot; <a href="/downloads">Downloads &amp; Setup Guides</a>
         </footer>
       </div>
     </>

@@ -316,13 +316,8 @@ export default function LandingPage() {
             </div>
             <div style={styles.footerCol}>
               <h4 style={styles.footerColTitle}>Resources</h4>
+              <Link to="/downloads" style={styles.footerLink}>Downloads</Link>
               <a href="https://github.com/devops-monk/ddns" target="_blank" rel="noreferrer" style={styles.footerLink}>GitHub</a>
-              <a href="/docs/api" style={styles.footerLink}>API Docs</a>
-              <a href="/docs" style={styles.footerLink}>Documentation</a>
-            </div>
-            <div style={styles.footerCol}>
-              <h4 style={styles.footerColTitle}>Status</h4>
-              <a href="/status" style={styles.footerLink}>System Status</a>
             </div>
           </div>
         </div>
