@@ -9,6 +9,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd server && npm install && npm run lint
+      - run: cd dashboard && npm install && npm run lint
+
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
@@ -23,17 +34,6 @@ jobs:
           script: |
             cd /opt/ddns-platform
             git pull origin main
-            cd server && npm ci --production && npm run build
-            cd ../dashboard && npm ci && npx vite build
+            cd server && npm install && npm run build
+            cd ../dashboard && npm install && npx vite build
             pm2 restart ddns-api
-
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: cd server && npm ci && npm run lint
-      - run: cd dashboard && npm ci && npm run lint
