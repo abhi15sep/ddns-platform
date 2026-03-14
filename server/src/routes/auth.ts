@@ -204,6 +204,103 @@ router.post('/logout', (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+// Get profile
+router.get('/profile', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const userResult = await pool.query(
+    'SELECT email, created_at, password_hash FROM users WHERE id=$1',
+    [userId]
+  );
+  if (!userResult.rows.length) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+  const user = userResult.rows[0];
+
+  // Get linked OAuth providers
+  const oauthResult = await pool.query(
+    'SELECT provider FROM oauth_accounts WHERE user_id=$1',
+    [userId]
+  );
+
+  res.json({
+    email: user.email,
+    created_at: user.created_at,
+    has_password: !!user.password_hash,
+    providers: oauthResult.rows.map((r: any) => r.provider),
+  });
+});
+
+// Change password
+router.post('/change-password', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 8) {
+    res.status(400).json({ error: 'New password must be at least 8 characters' });
+    return;
+  }
+
+  const userResult = await pool.query('SELECT password_hash FROM users WHERE id=$1', [userId]);
+  if (!userResult.rows.length) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  // If user has a password, verify current password
+  if (userResult.rows[0].password_hash) {
+    if (!currentPassword) {
+      res.status(400).json({ error: 'Current password is required' });
+      return;
+    }
+    const valid = await bcrypt.compare(currentPassword, userResult.rows[0].password_hash);
+    if (!valid) {
+      res.status(401).json({ error: 'Current password is incorrect' });
+      return;
+    }
+  }
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await pool.query('UPDATE users SET password_hash=$1, updated_at=NOW() WHERE id=$2', [hash, userId]);
+  res.json({ ok: true });
+});
+
+// Get API token
+router.get('/api-token', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const result = await pool.query('SELECT api_token FROM users WHERE id=$1', [userId]);
+
+  let token = result.rows[0]?.api_token;
+  if (!token) {
+    // Auto-generate on first access
+    token = crypto.randomBytes(32).toString('hex');
+    await pool.query('UPDATE users SET api_token=$1 WHERE id=$2', [token, userId]);
+  }
+
+  res.json({ token });
+});
+
+// Regenerate API token
+router.post('/api-token/regenerate', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const token = crypto.randomBytes(32).toString('hex');
+  await pool.query('UPDATE users SET api_token=$1 WHERE id=$2', [token, userId]);
+  res.json({ token });
+});
+
+// Delete account
+router.delete('/account', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+
+  // Delete user (cascades to domains, oauth_accounts, totp_secrets, etc.)
+  await pool.query('DELETE FROM update_log WHERE domain IN (SELECT subdomain FROM domains WHERE user_id=$1)', [userId]);
+  await pool.query('DELETE FROM domains WHERE user_id=$1', [userId]);
+  await pool.query('DELETE FROM users WHERE id=$1', [userId]);
+
+  res.clearCookie('token');
+  res.json({ ok: true });
+});
+
 // 2FA status
 router.get('/2fa/status', requireAuth, async (req: Request, res: Response) => {
   const userId = (req.user as AuthUser).sub;
