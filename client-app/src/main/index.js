@@ -13,11 +13,14 @@ const store = new Store({
     showNotifications: true,
     lastKnownIp: null,
     lastUpdateTime: null,
+    domainStatuses: {},   // { subdomain: { status, ip, error, lastUpdate } }
+    lastError: null,
   },
 });
 
 let mainWindow = null;
 let tray = null;
+let healthInterval = null;
 
 const autoLauncher = new AutoLaunch({
   name: 'DDNS Client',
@@ -32,8 +35,8 @@ function createWindow() {
   }
 
   mainWindow = new BrowserWindow({
-    width: 480,
-    height: 600,
+    width: 500,
+    height: 680,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'index.js'),
@@ -55,21 +58,17 @@ function createWindow() {
 }
 
 function createTray() {
-  // Use a simple 16x16 icon or template image
   const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
   let icon;
   try {
     icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
   } catch {
-    // Fallback: create a tiny colored square
     icon = nativeImage.createEmpty();
   }
 
   tray = new Tray(icon);
   tray.setToolTip('DDNS Client');
-
   updateTrayMenu();
-
   tray.on('click', () => createWindow());
 }
 
@@ -94,11 +93,26 @@ function updateTrayMenu() {
 function onUpdateResult(result) {
   console.log(`[DDNS] Update result: ${result.domain} -> ${result.status} (IP: ${result.ip}${result.error ? ', error: ' + result.error : ''})`);
 
-  if (result.status === 'error' && store.get('showNotifications')) {
-    new Notification({
-      title: 'DDNS Update Failed',
-      body: `${result.domain}: ${result.error || 'Unknown error'}`,
-    }).show();
+  // Store per-domain status
+  const statuses = store.get('domainStatuses') || {};
+  statuses[result.domain] = {
+    status: result.status,
+    ip: result.ip,
+    error: result.error || null,
+    lastUpdate: new Date().toISOString(),
+  };
+  store.set('domainStatuses', statuses);
+
+  if (result.status === 'error') {
+    store.set('lastError', result.error || 'Unknown error');
+    if (store.get('showNotifications')) {
+      new Notification({
+        title: 'DDNS Update Failed',
+        body: `${result.domain}: ${result.error || 'Unknown error'}`,
+      }).show();
+    }
+  } else {
+    store.set('lastError', null);
   }
 
   if (result.changed && store.get('showNotifications')) {
@@ -116,12 +130,20 @@ function onUpdateResult(result) {
 
   // Notify renderer if open
   if (mainWindow) {
-    mainWindow.webContents.send('status-update', {
-      ip: result.ip,
-      lastUpdate: new Date().toISOString(),
-      changed: result.changed,
-    });
+    mainWindow.webContents.send('status-update', getFullStatus());
   }
+}
+
+function getFullStatus() {
+  return {
+    ip: store.get('lastKnownIp'),
+    lastUpdate: store.get('lastUpdateTime'),
+    serverUrl: store.get('serverUrl'),
+    domains: store.get('domains'),
+    domainStatuses: store.get('domainStatuses') || {},
+    lastError: store.get('lastError'),
+    isConfigured: !!(store.get('serverUrl') && store.get('domains').length > 0),
+  };
 }
 
 // IPC handlers
@@ -146,33 +168,66 @@ ipcMain.handle('set-config', (_event, key, value) => {
 });
 
 ipcMain.handle('check-now', () => checkNow(store, onUpdateResult));
+ipcMain.handle('get-status', () => getFullStatus());
 
-ipcMain.handle('get-status', () => ({
-  ip: store.get('lastKnownIp'),
-  lastUpdate: store.get('lastUpdateTime'),
-  serverUrl: store.get('serverUrl'),
-  domains: store.get('domains'),
-  isConfigured: !!(store.get('serverUrl') && store.get('domains').length > 0),
-}));
+// Ping health endpoint
+ipcMain.handle('ping-server', async () => {
+  const serverUrl = store.get('serverUrl');
+  if (!serverUrl) return { ok: false, error: 'No server configured' };
+
+  const base = serverUrl.replace(/\/+$/, '');
+  try {
+    const start = Date.now();
+    const res = await fetch(`${base}/health`, {
+      headers: { 'User-Agent': 'DDNS-Desktop-Client/1.0' },
+      signal: AbortSignal.timeout(5000),
+    });
+    const latency = Date.now() - start;
+    if (res.ok) {
+      return { ok: true, latency };
+    }
+    return { ok: false, error: `HTTP ${res.status}`, latency };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+// Ping internet (ipify)
+ipcMain.handle('ping-internet', async () => {
+  try {
+    const start = Date.now();
+    const res = await fetch('https://api.ipify.org?format=json', {
+      signal: AbortSignal.timeout(5000),
+    });
+    const latency = Date.now() - start;
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, ip: data.ip, latency };
+    }
+    return { ok: false, error: `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
 
 // App lifecycle
 app.on('ready', () => {
   createTray();
 
-  // Start updater if already configured
   if (store.get('serverUrl') && store.get('domains').length > 0) {
     startUpdater(store, onUpdateResult);
   } else {
-    createWindow(); // Show setup on first launch
+    createWindow();
   }
 });
 
 app.on('window-all-closed', (e) => {
-  e.preventDefault(); // Keep running in tray
+  e.preventDefault();
 });
 
 app.on('before-quit', () => {
   stopUpdater();
+  if (healthInterval) clearInterval(healthInterval);
   app.isQuitting = true;
 });
 

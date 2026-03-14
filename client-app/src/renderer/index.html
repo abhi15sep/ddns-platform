@@ -5,195 +5,625 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DDNS Client</title>
   <style>
+    :root {
+      --bg: #0f1117;
+      --bg-card: #181b25;
+      --bg-card-hover: #1e2230;
+      --border: #2a2e3a;
+      --text: #e4e6ed;
+      --text-dim: #7a7f8e;
+      --text-muted: #50556a;
+      --accent: #6366f1;
+      --accent-glow: rgba(99,102,241,0.15);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
+      --green-glow: rgba(34,197,94,0.25);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.12);
+      --red-glow: rgba(239,68,68,0.25);
+      --yellow: #f59e0b;
+      --yellow-dim: rgba(245,158,11,0.12);
+      --radius: 12px;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f8f9fa; color: #1a1a1a; padding: 1.5rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
-    h1 { font-size: 1.25rem; margin-bottom: 1rem; text-align: center; }
-    h2 { font-size: 1rem; margin-bottom: 0.75rem; color: #4f46e5; }
 
+    /* Header */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem 0.75rem;
+    }
+    .header-brand {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-weight: 700; font-size: 1rem; letter-spacing: -0.02em;
+    }
+    .header-icon {
+      width: 26px; height: 26px; background: var(--accent);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800; color: white;
+    }
+    .header-version { font-size: 0.65rem; color: var(--text-muted); font-weight: 400; }
+
+    /* Navigation */
+    .nav {
+      display: flex; gap: 2px; padding: 0 1.25rem; margin-bottom: 1rem;
+      background: var(--bg-card); border-radius: 10px; margin: 0 1.25rem 1rem;
+      padding: 3px;
+    }
+    .nav-btn {
+      flex: 1; padding: 0.5rem 0.25rem; text-align: center; border: none;
+      background: none; cursor: pointer; font-size: 0.75rem; color: var(--text-dim);
+      border-radius: 8px; font-weight: 500; transition: all 0.2s;
+    }
+    .nav-btn:hover { color: var(--text); }
+    .nav-btn.active {
+      background: var(--accent); color: white; font-weight: 600;
+      box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+    }
+
+    /* Content area */
+    .content { padding: 0 1.25rem 1.25rem; }
     .page { display: none; }
     .page.active { display: block; }
 
-    .status-card {
-      background: white; padding: 1.25rem; border-radius: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem;
+    /* Cards */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem; margin-bottom: 0.75rem;
+      transition: border-color 0.2s;
     }
-    .status-indicator {
-      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-      margin-right: 0.5rem;
+    .card:hover { border-color: #3a3e4a; }
+    .card-title {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;
     }
-    .status-green { background: #22c55e; }
-    .status-yellow { background: #eab308; }
-    .status-red { background: #ef4444; }
 
-    .stat { margin-bottom: 0.5rem; }
-    .stat-label { font-size: 0.75rem; color: #666; text-transform: uppercase; }
-    .stat-value { font-size: 1.1rem; font-weight: 600; }
-
-    input, select {
-      width: 100%; padding: 0.6rem; border: 1px solid #ddd;
-      border-radius: 6px; font-size: 0.875rem; margin-bottom: 0.75rem;
+    /* Connectivity nodes */
+    .connectivity {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; padding: 0.5rem 0;
     }
-    label { display: block; font-size: 0.875rem; margin-bottom: 0.25rem; color: #333; }
+    .node {
+      display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+      min-width: 90px;
+    }
+    .node-ring {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 2.5px solid var(--border); transition: all 0.4s;
+      position: relative;
+    }
+    .node-ring svg { width: 22px; height: 22px; fill: var(--text-muted); transition: fill 0.4s; }
+    .node-ring.ok {
+      border-color: var(--green); background: var(--green-dim);
+      box-shadow: 0 0 16px var(--green-glow);
+    }
+    .node-ring.ok svg { fill: var(--green); }
+    .node-ring.err {
+      border-color: var(--red); background: var(--red-dim);
+      box-shadow: 0 0 16px var(--red-glow);
+    }
+    .node-ring.err svg { fill: var(--red); }
+    .node-ring.checking {
+      border-color: var(--yellow); background: var(--yellow-dim);
+      animation: pulse-ring 1.2s ease-in-out infinite;
+    }
+    .node-ring.checking svg { fill: var(--yellow); }
+    @keyframes pulse-ring {
+      0%, 100% { box-shadow: 0 0 8px rgba(245,158,11,0.15); }
+      50% { box-shadow: 0 0 20px rgba(245,158,11,0.35); }
+    }
+    .node-label { font-size: 0.7rem; font-weight: 600; color: var(--text); }
+    .node-detail { font-size: 0.6rem; color: var(--text-dim); }
 
+    /* Connection line between nodes */
+    .conn-line {
+      width: 48px; height: 2px; background: var(--border);
+      margin-bottom: 1.6rem; /* offset for label+detail below node */
+      position: relative; transition: background 0.4s;
+    }
+    .conn-line.ok { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+    .conn-line.err { background: var(--red); box-shadow: 0 0 6px var(--red-glow); }
+    .conn-line::after {
+      content: ''; position: absolute; right: -3px; top: -3px;
+      width: 0; height: 0;
+      border-left: 5px solid var(--border); border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent; transition: border-color 0.4s;
+    }
+    .conn-line.ok::after { border-left-color: var(--green); }
+    .conn-line.err::after { border-left-color: var(--red); }
+
+    /* Big IP display */
+    .ip-display {
+      text-align: center; padding: 0.5rem 0;
+    }
+    .ip-value {
+      font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    .ip-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+    /* Domain status rows */
+    .domain-row {
+      display: flex; align-items: center; padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .domain-row:last-child { border: none; }
+    .domain-dot {
+      width: 8px; height: 8px; border-radius: 50%; margin-right: 0.65rem;
+      flex-shrink: 0; background: var(--text-muted);
+    }
+    .domain-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+    .domain-dot.err { background: var(--red); box-shadow: 0 0 6px var(--red-glow); }
+    .domain-dot.pending { background: var(--yellow); }
+    .domain-info { flex: 1; }
+    .domain-name {
+      font-size: 0.8rem; font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    .domain-meta { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.15rem; }
+    .domain-actions { flex-shrink: 0; }
+
+    /* Stats row */
+    .stats-row { display: flex; gap: 0.5rem; }
+    .stat-box {
+      flex: 1; background: var(--bg); border-radius: 8px;
+      padding: 0.6rem; text-align: center;
+    }
+    .stat-num {
+      font-size: 1.1rem; font-weight: 700;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    .stat-num.green { color: var(--green); }
+    .stat-num.red { color: var(--red); }
+    .stat-label { font-size: 0.6rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+    /* Update log */
+    .log-entry {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.4rem 0; font-size: 0.7rem;
+    }
+    .log-time { color: var(--text-muted); font-family: monospace; min-width: 52px; }
+    .log-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .log-dot.ok { background: var(--green); }
+    .log-dot.err { background: var(--red); }
+    .log-msg { color: var(--text-dim); }
+
+    /* Buttons */
     .btn {
-      display: inline-block; padding: 0.6rem 1.25rem; border: none;
-      border-radius: 6px; cursor: pointer; font-size: 0.875rem;
-      font-weight: 500; width: 100%; margin-bottom: 0.5rem;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0.55rem 1rem; border: none; border-radius: 8px;
+      cursor: pointer; font-size: 0.8rem; font-weight: 600;
+      transition: all 0.2s; width: 100%;
     }
-    .btn-primary { background: #4f46e5; color: white; }
-    .btn-secondary { background: #e5e5e5; color: #333; }
-    .btn-danger { background: #dc2626; color: white; }
-    .btn:hover { opacity: 0.9; }
+    .btn-primary {
+      background: var(--accent); color: white;
+      box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+    }
+    .btn-primary:hover { background: #5558e6; box-shadow: 0 4px 12px rgba(99,102,241,0.35); }
+    .btn-sm { width: auto; padding: 0.3rem 0.6rem; font-size: 0.7rem; }
+    .btn-ghost {
+      background: none; color: var(--text-dim); border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: #50556a; }
+    .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid transparent; }
+    .btn-danger:hover { border-color: var(--red); }
 
-    .nav {
-      display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid #e5e5e5;
+    /* Forms */
+    .form-group { margin-bottom: 0.75rem; }
+    .form-label {
+      display: block; font-size: 0.7rem; font-weight: 600;
+      color: var(--text-dim); margin-bottom: 0.3rem; text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .nav-btn {
-      flex: 1; padding: 0.5rem; text-align: center; border: none; background: none;
-      cursor: pointer; font-size: 0.8rem; color: #666; border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
+    input, select {
+      width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.825rem; background: var(--bg);
+      color: var(--text); outline: none; transition: border-color 0.2s;
     }
-    .nav-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 600; }
+    input:focus, select:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--text-muted); }
+    select { cursor: pointer; }
+    select option { background: var(--bg-card); }
 
-    .domain-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;
-    }
-    .domain-item:last-child { border: none; }
-
+    /* Toggle switch */
     .toggle-row {
       display: flex; justify-content: space-between; align-items: center;
       padding: 0.5rem 0;
     }
+    .toggle-row span { font-size: 0.825rem; }
+    .switch {
+      position: relative; width: 40px; height: 22px; appearance: none;
+      background: var(--border); border-radius: 11px; cursor: pointer;
+      border: none; outline: none; transition: background 0.2s;
+    }
+    .switch:checked { background: var(--accent); }
+    .switch::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 16px; height: 16px; background: white; border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .switch:checked::after { transform: translateX(18px); }
 
-    .message { padding: 0.5rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.75rem; }
-    .message-success { background: #f0fdf4; color: #16a34a; }
-    .message-error { background: #fef2f2; color: #dc2626; }
+    /* Message toasts */
+    .toast {
+      padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem;
+      margin-bottom: 0.5rem; font-weight: 500;
+    }
+    .toast-ok { background: var(--green-dim); color: var(--green); }
+    .toast-err { background: var(--red-dim); color: var(--red); }
+
+    /* Refresh button animation */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning svg { animation: spin 1s linear infinite; }
+
+    /* Scroll */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   </style>
 </head>
 <body>
-  <h1>DDNS Client</h1>
 
-  <!-- Setup page (shown when not configured) -->
+  <!-- ======== SETUP PAGE ======== -->
   <div id="setup-page" class="page">
-    <div class="status-card">
-      <h2>Setup</h2>
-      <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">
-        Enter your DDNS server URL and add at least one domain to get started.
+    <div style="padding: 2rem 1.5rem; text-align: center;">
+      <div class="header-icon" style="width: 48px; height: 48px; font-size: 1.2rem; margin: 0 auto 1rem; border-radius: 12px;">D</div>
+      <h1 style="font-size: 1.2rem; margin-bottom: 0.25rem;">DDNS Client</h1>
+      <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+        Connect to your DDNS server to keep your IP updated.
       </p>
-
-      <label for="setup-url">Server URL</label>
-      <input id="setup-url" type="url" placeholder="https://api.devops-monk.com" />
-
-      <label for="setup-subdomain">Subdomain</label>
-      <input id="setup-subdomain" type="text" placeholder="myhome" />
-
-      <label for="setup-token">Token</label>
-      <input id="setup-token" type="text" placeholder="Paste token from dashboard" />
-
-      <div id="setup-message"></div>
-
-      <button class="btn btn-primary" onclick="saveSetup()">Save & Start</button>
+      <div style="text-align: left;">
+        <div class="form-group">
+          <label class="form-label">Server URL</label>
+          <input id="setup-url" type="url" placeholder="https://api.devops-monk.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subdomain</label>
+          <input id="setup-subdomain" type="text" placeholder="myhome" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token</label>
+          <input id="setup-token" type="text" placeholder="Paste token from web dashboard" />
+        </div>
+        <div id="setup-message"></div>
+        <button class="btn btn-primary" onclick="saveSetup()" style="margin-top: 0.5rem;">Connect & Start</button>
+      </div>
     </div>
   </div>
 
-  <!-- Main pages (shown when configured) -->
+  <!-- ======== MAIN APP ======== -->
   <div id="main-pages" style="display:none;">
+    <div class="header">
+      <div class="header-brand">
+        <div class="header-icon">D</div>
+        <span>DDNS Client <span class="header-version">v1.0</span></span>
+      </div>
+      <button id="refresh-btn" class="btn btn-sm btn-ghost" onclick="handleCheckNow()" title="Check now">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+          <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+        </svg>
+      </button>
+    </div>
+
     <div class="nav">
-      <button class="nav-btn active" onclick="showPage('status')">Status</button>
-      <button class="nav-btn" onclick="showPage('domains')">Domains</button>
-      <button class="nav-btn" onclick="showPage('settings')">Settings</button>
+      <button class="nav-btn active" data-page="status">Status</button>
+      <button class="nav-btn" data-page="domains">Domains</button>
+      <button class="nav-btn" data-page="settings">Settings</button>
     </div>
 
-    <!-- Status page -->
-    <div id="status-page" class="page active">
-      <div class="status-card">
-        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-          <span id="status-dot" class="status-indicator status-green"></span>
-          <span id="status-text" style="font-weight: 500;">Connected</span>
+    <div class="content">
+
+      <!-- ===== STATUS PAGE ===== -->
+      <div id="status-page" class="page active">
+        <!-- Connectivity diagram -->
+        <div class="card">
+          <div class="card-title">Connectivity</div>
+          <div class="connectivity">
+            <div class="node">
+              <div class="node-ring" id="node-internet">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+              </div>
+              <span class="node-label">Internet</span>
+              <span class="node-detail" id="internet-latency">--</span>
+            </div>
+
+            <div class="conn-line" id="line-1"></div>
+
+            <div class="node">
+              <div class="node-ring" id="node-server">
+                <svg viewBox="0 0 24 24"><path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+              </div>
+              <span class="node-label">DDNS Server</span>
+              <span class="node-detail" id="server-latency">--</span>
+            </div>
+
+            <div class="conn-line" id="line-2"></div>
+
+            <div class="node">
+              <div class="node-ring" id="node-dns">
+                <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+              </div>
+              <span class="node-label">DNS Records</span>
+              <span class="node-detail" id="dns-status">--</span>
+            </div>
+          </div>
         </div>
 
-        <div class="stat">
-          <div class="stat-label">Current IP</div>
-          <div class="stat-value" id="current-ip">---</div>
+        <!-- Public IP -->
+        <div class="card">
+          <div class="ip-display">
+            <div class="ip-value" id="current-ip">---</div>
+            <div class="ip-label">Public IP Address</div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="stat-label">Last Updated</div>
-          <div class="stat-value" id="last-update">Never</div>
+
+        <!-- Stats -->
+        <div class="stats-row" style="margin-bottom: 0.75rem;">
+          <div class="stat-box">
+            <div class="stat-num" id="stat-domains">0</div>
+            <div class="stat-label">Domains</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-updates">0</div>
+            <div class="stat-label">Updates</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-uptime">--</div>
+            <div class="stat-label">Last Check</div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="stat-label">Domains</div>
-          <div class="stat-value" id="domain-count">0</div>
+
+        <!-- Recent activity -->
+        <div class="card">
+          <div class="card-title">Recent Activity</div>
+          <div id="activity-log" style="max-height: 120px; overflow-y: auto;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); padding: 0.5rem 0;">No activity yet</div>
+          </div>
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="handleCheckNow()">Check Now</button>
-      <div id="check-message"></div>
-    </div>
-
-    <!-- Domains page -->
-    <div id="domains-page" class="page">
-      <div class="status-card">
-        <h2>Managed Domains</h2>
-        <div id="domain-list"></div>
-      </div>
-
-      <div class="status-card">
-        <h2>Add Domain</h2>
-        <label for="new-subdomain">Subdomain</label>
-        <input id="new-subdomain" type="text" placeholder="subdomain" />
-        <label for="new-token">Token</label>
-        <input id="new-token" type="text" placeholder="Token from dashboard" />
-        <button class="btn btn-primary" onclick="addDomain()">Add Domain</button>
-      </div>
-    </div>
-
-    <!-- Settings page -->
-    <div id="settings-page" class="page">
-      <div class="status-card">
-        <h2>Settings</h2>
-
-        <label for="server-url">Server URL</label>
-        <input id="server-url" type="url" placeholder="https://api.devops-monk.com" />
-
-        <label for="update-interval">Update Interval</label>
-        <select id="update-interval">
-          <option value="1">Every 1 minute</option>
-          <option value="2">Every 2 minutes</option>
-          <option value="5" selected>Every 5 minutes</option>
-          <option value="10">Every 10 minutes</option>
-          <option value="30">Every 30 minutes</option>
-        </select>
-
-        <div class="toggle-row">
-          <span>Start on boot</span>
-          <input type="checkbox" id="start-on-boot" onchange="toggleBoot()" />
-        </div>
-        <div class="toggle-row">
-          <span>Show notifications</span>
-          <input type="checkbox" id="show-notifications" checked onchange="toggleNotifications()" />
+      <!-- ===== DOMAINS PAGE ===== -->
+      <div id="domains-page" class="page">
+        <div class="card">
+          <div class="card-title">Managed Domains</div>
+          <div id="domain-list">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">No domains configured</div>
+          </div>
         </div>
 
-        <button class="btn btn-primary" onclick="saveSettings()" style="margin-top: 1rem;">
+        <div class="card">
+          <div class="card-title">Add Domain</div>
+          <div class="form-group">
+            <label class="form-label">Subdomain</label>
+            <input id="new-subdomain" type="text" placeholder="subdomain" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Token</label>
+            <input id="new-token" type="text" placeholder="Token from dashboard" />
+          </div>
+          <button class="btn btn-primary" onclick="addDomain()">Add Domain</button>
+        </div>
+      </div>
+
+      <!-- ===== SETTINGS PAGE ===== -->
+      <div id="settings-page" class="page">
+        <div class="card">
+          <div class="card-title">Connection</div>
+          <div class="form-group">
+            <label class="form-label">Server URL</label>
+            <input id="server-url" type="url" placeholder="https://api.devops-monk.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Update Interval</label>
+            <select id="update-interval">
+              <option value="1">Every 1 minute</option>
+              <option value="2">Every 2 minutes</option>
+              <option value="5" selected>Every 5 minutes</option>
+              <option value="10">Every 10 minutes</option>
+              <option value="30">Every 30 minutes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Preferences</div>
+          <div class="toggle-row">
+            <span>Start on boot</span>
+            <input type="checkbox" class="switch" id="start-on-boot" onchange="toggleBoot()" />
+          </div>
+          <div class="toggle-row">
+            <span>Show notifications</span>
+            <input type="checkbox" class="switch" id="show-notifications" checked onchange="toggleNotifications()" />
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()" style="margin-bottom: 0.5rem;">
           Save Settings
         </button>
+        <div id="settings-message"></div>
       </div>
+
     </div>
   </div>
 
   <script>
-    // Page navigation
-    function showPage(name) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(name + '-page').classList.add('active');
-      event.target.classList.add('active');
+    // State
+    let updateCounter = 0;
+    let activityLog = [];
+    let healthCheckInterval = null;
+
+    // ---- Navigation ----
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const page = btn.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(page + '-page').classList.add('active');
+        btn.classList.add('active');
+      });
+    });
+
+    // ---- Connectivity checks ----
+    async function runHealthChecks() {
+      // Ping internet
+      const nodeInternet = document.getElementById('node-internet');
+      const line1 = document.getElementById('line-1');
+      const internetLatency = document.getElementById('internet-latency');
+
+      nodeInternet.className = 'node-ring checking';
+      const inetResult = await window.ddns.pingInternet();
+      if (inetResult.ok) {
+        nodeInternet.className = 'node-ring ok';
+        line1.className = 'conn-line ok';
+        internetLatency.textContent = inetResult.latency + 'ms';
+      } else {
+        nodeInternet.className = 'node-ring err';
+        line1.className = 'conn-line err';
+        internetLatency.textContent = 'Offline';
+      }
+
+      // Ping DDNS server
+      const nodeServer = document.getElementById('node-server');
+      const line2 = document.getElementById('line-2');
+      const serverLatency = document.getElementById('server-latency');
+
+      nodeServer.className = 'node-ring checking';
+      const srvResult = await window.ddns.pingServer();
+      if (srvResult.ok) {
+        nodeServer.className = 'node-ring ok';
+        line2.className = 'conn-line ok';
+        serverLatency.textContent = srvResult.latency + 'ms';
+      } else {
+        nodeServer.className = 'node-ring err';
+        line2.className = 'conn-line err';
+        serverLatency.textContent = srvResult.error || 'Down';
+      }
+
+      // DNS status (based on domain update statuses)
+      updateDnsNode();
     }
 
-    // Initialize
+    function updateDnsNode() {
+      const nodeDns = document.getElementById('node-dns');
+      const dnsStatus = document.getElementById('dns-status');
+      const status = window._lastStatus;
+
+      if (!status || !status.domainStatuses) {
+        nodeDns.className = 'node-ring';
+        dnsStatus.textContent = 'No data';
+        return;
+      }
+
+      const entries = Object.values(status.domainStatuses);
+      if (entries.length === 0) {
+        nodeDns.className = 'node-ring';
+        dnsStatus.textContent = 'No domains';
+        return;
+      }
+
+      const allOk = entries.every(e => e.status === 'ok');
+      const anyErr = entries.some(e => e.status === 'error');
+
+      if (allOk) {
+        nodeDns.className = 'node-ring ok';
+        dnsStatus.textContent = entries.length + ' synced';
+      } else if (anyErr) {
+        nodeDns.className = 'node-ring err';
+        dnsStatus.textContent = 'Sync error';
+      } else {
+        nodeDns.className = 'node-ring';
+        dnsStatus.textContent = 'Pending';
+      }
+    }
+
+    // ---- Status display ----
+    function updateStatusDisplay(status) {
+      window._lastStatus = status;
+
+      document.getElementById('current-ip').textContent = status.ip || '---';
+
+      const domains = status.domains || [];
+      document.getElementById('stat-domains').textContent = domains.length;
+      document.getElementById('stat-updates').textContent = updateCounter;
+
+      if (status.lastUpdate) {
+        const ago = timeSince(new Date(status.lastUpdate));
+        document.getElementById('stat-uptime').textContent = ago;
+      }
+
+      updateDomainList(domains, status.domainStatuses || {});
+      updateDnsNode();
+    }
+
+    function timeSince(date) {
+      const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (secs < 10) return 'Now';
+      if (secs < 60) return secs + 's';
+      if (secs < 3600) return Math.floor(secs / 60) + 'm';
+      return Math.floor(secs / 3600) + 'h';
+    }
+
+    function addActivityEntry(status, message) {
+      const now = new Date();
+      const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      activityLog.unshift({ time, status, message });
+      if (activityLog.length > 50) activityLog.pop();
+      renderActivityLog();
+    }
+
+    function renderActivityLog() {
+      const el = document.getElementById('activity-log');
+      if (!activityLog.length) {
+        el.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:0.5rem 0;">No activity yet</div>';
+        return;
+      }
+      el.innerHTML = activityLog.map(e => `
+        <div class="log-entry">
+          <span class="log-time">${e.time}</span>
+          <span class="log-dot ${e.status}"></span>
+          <span class="log-msg">${e.message}</span>
+        </div>
+      `).join('');
+    }
+
+    // ---- Domain list ----
+    function updateDomainList(domains, statuses) {
+      const list = document.getElementById('domain-list');
+      if (!domains.length) {
+        list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-muted);padding:0.5rem 0;">No domains configured</div>';
+        return;
+      }
+      list.innerHTML = domains.map((d, i) => {
+        const s = statuses[d.subdomain];
+        const dotClass = s ? (s.status === 'ok' ? 'ok' : 'err') : 'pending';
+        const detail = s
+          ? (s.status === 'ok'
+            ? (s.ip || '') + ' &middot; ' + timeSince(new Date(s.lastUpdate))
+            : '<span style="color:var(--red)">' + (s.error || 'Error') + '</span>')
+          : 'Waiting for first update';
+        return `
+          <div class="domain-row">
+            <div class="domain-dot ${dotClass}"></div>
+            <div class="domain-info">
+              <div class="domain-name">${d.subdomain}.dyn.devops-monk.com</div>
+              <div class="domain-meta">${detail}</div>
+            </div>
+            <div class="domain-actions">
+              <button class="btn btn-sm btn-danger" onclick="removeDomain(${i})">Remove</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ---- Initialize ----
     async function init() {
       const status = await window.ddns.getStatus();
 
@@ -207,42 +637,35 @@
       document.getElementById('main-pages').style.display = 'block';
 
       updateStatusDisplay(status);
-      updateDomainList(status.domains || []);
       await loadSettings();
+
+      // Run health checks immediately, then every 30s
+      runHealthChecks();
+      if (healthCheckInterval) clearInterval(healthCheckInterval);
+      healthCheckInterval = setInterval(runHealthChecks, 30000);
     }
 
-    function updateStatusDisplay(status) {
-      document.getElementById('current-ip').textContent = status.ip || '---';
-      document.getElementById('last-update').textContent =
-        status.lastUpdate ? new Date(status.lastUpdate).toLocaleString() : 'Never';
-      document.getElementById('domain-count').textContent =
-        (status.domains || []).length.toString();
+    // ---- Check Now ----
+    async function handleCheckNow() {
+      const btn = document.getElementById('refresh-btn');
+      btn.classList.add('spinning');
+      btn.disabled = true;
+
+      addActivityEntry('ok', 'Manual check triggered');
+
+      await window.ddns.checkNow();
+      await runHealthChecks();
+
+      setTimeout(async () => {
+        const status = await window.ddns.getStatus();
+        updateCounter++;
+        updateStatusDisplay(status);
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+      }, 1500);
     }
 
-    function updateDomainList(domains) {
-      const list = document.getElementById('domain-list');
-      if (!domains.length) {
-        list.innerHTML = '<p style="color:#999;font-size:0.85rem;">No domains configured</p>';
-        return;
-      }
-      list.innerHTML = domains.map((d, i) => `
-        <div class="domain-item">
-          <span>${d.subdomain}</span>
-          <button class="btn btn-danger" style="width:auto;padding:0.25rem 0.5rem;font-size:0.75rem;"
-            onclick="removeDomain(${i})">Remove</button>
-        </div>
-      `).join('');
-    }
-
-    async function loadSettings() {
-      const config = await window.ddns.getConfig();
-      document.getElementById('server-url').value = config.serverUrl || '';
-      document.getElementById('update-interval').value = (config.updateInterval || 5).toString();
-      document.getElementById('start-on-boot').checked = config.startOnBoot || false;
-      document.getElementById('show-notifications').checked = config.showNotifications !== false;
-    }
-
-    // Setup
+    // ---- Setup ----
     async function saveSetup() {
       const url = document.getElementById('setup-url').value.trim();
       const subdomain = document.getElementById('setup-subdomain').value.trim();
@@ -250,18 +673,17 @@
       const msgEl = document.getElementById('setup-message');
 
       if (!url || !subdomain || !token) {
-        msgEl.innerHTML = '<div class="message message-error">All fields are required</div>';
+        msgEl.innerHTML = '<div class="toast toast-err">All fields are required</div>';
         return;
       }
 
+      msgEl.innerHTML = '<div class="toast toast-ok">Connecting...</div>';
       await window.ddns.setConfig('serverUrl', url);
       await window.ddns.setConfig('domains', [{ subdomain, token }]);
-
-      msgEl.innerHTML = '<div class="message message-success">Saved! Starting updates...</div>';
       setTimeout(() => init(), 1000);
     }
 
-    // Domains
+    // ---- Domains ----
     async function addDomain() {
       const subdomain = document.getElementById('new-subdomain').value.trim();
       const token = document.getElementById('new-token').value.trim();
@@ -274,51 +696,78 @@
 
       document.getElementById('new-subdomain').value = '';
       document.getElementById('new-token').value = '';
-      updateDomainList(domains);
+
+      const status = await window.ddns.getStatus();
+      updateStatusDisplay(status);
+      addActivityEntry('ok', `Added ${subdomain}`);
     }
 
     async function removeDomain(index) {
       const config = await window.ddns.getConfig();
       const domains = config.domains || [];
+      const name = domains[index]?.subdomain || '';
       domains.splice(index, 1);
       await window.ddns.setConfig('domains', domains);
-      updateDomainList(domains);
+
+      const status = await window.ddns.getStatus();
+      updateStatusDisplay(status);
+      addActivityEntry('err', `Removed ${name}`);
     }
 
-    // Settings
+    // ---- Settings ----
+    async function loadSettings() {
+      const config = await window.ddns.getConfig();
+      document.getElementById('server-url').value = config.serverUrl || '';
+      document.getElementById('update-interval').value = (config.updateInterval || 5).toString();
+      document.getElementById('start-on-boot').checked = config.startOnBoot || false;
+      document.getElementById('show-notifications').checked = config.showNotifications !== false;
+    }
+
     async function saveSettings() {
       const url = document.getElementById('server-url').value.trim();
       const interval = parseInt(document.getElementById('update-interval').value);
       await window.ddns.setConfig('serverUrl', url);
       await window.ddns.setConfig('updateInterval', interval);
+      const msgEl = document.getElementById('settings-message');
+      msgEl.innerHTML = '<div class="toast toast-ok">Settings saved</div>';
+      setTimeout(() => { msgEl.innerHTML = ''; }, 2000);
     }
 
     async function toggleBoot() {
-      const checked = document.getElementById('start-on-boot').checked;
-      await window.ddns.setConfig('startOnBoot', checked);
+      await window.ddns.setConfig('startOnBoot', document.getElementById('start-on-boot').checked);
     }
 
     async function toggleNotifications() {
-      const checked = document.getElementById('show-notifications').checked;
-      await window.ddns.setConfig('showNotifications', checked);
+      await window.ddns.setConfig('showNotifications', document.getElementById('show-notifications').checked);
     }
 
-    async function handleCheckNow() {
-      const msgEl = document.getElementById('check-message');
-      msgEl.innerHTML = '<div class="message message-success">Checking...</div>';
-      await window.ddns.checkNow();
-      setTimeout(async () => {
-        const status = await window.ddns.getStatus();
-        updateStatusDisplay(status);
-        msgEl.innerHTML = '<div class="message message-success">Updated!</div>';
-        setTimeout(() => { msgEl.innerHTML = ''; }, 2000);
-      }, 1500);
-    }
-
-    // Listen for updates from main process
+    // ---- Listen for real-time updates ----
     window.ddns.onStatusUpdate((data) => {
+      updateCounter++;
       updateStatusDisplay(data);
+
+      // Check domain statuses for activity log
+      if (data.domainStatuses) {
+        for (const [name, s] of Object.entries(data.domainStatuses)) {
+          if (s.status === 'ok') {
+            addActivityEntry('ok', `${name} updated to ${s.ip}`);
+          } else {
+            addActivityEntry('err', `${name}: ${s.error || 'Failed'}`);
+          }
+        }
+      }
+
+      // Re-check connectivity visuals
+      runHealthChecks();
     });
+
+    // Periodically update "last check" timer
+    setInterval(() => {
+      const status = window._lastStatus;
+      if (status?.lastUpdate) {
+        document.getElementById('stat-uptime').textContent = timeSince(new Date(status.lastUpdate));
+      }
+    }, 5000);
 
     init();
   </script>
