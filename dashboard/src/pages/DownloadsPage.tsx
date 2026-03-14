@@ -15,21 +15,50 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'rpi', label: 'Raspberry Pi' },
 ];
 
-const SNIPPETS: Record<TabKey, string> = {
-  linux: `# Add a cron job to update every 5 minutes
-crontab -e
+interface SnippetInfo {
+  desc: string;
+  steps: string[];
+  code: string;
+}
 
-# Paste this line:
+const SNIPPETS: Record<TabKey, SnippetInfo> = {
+  linux: {
+    desc: 'Set up a cron job that pings our server every 5 minutes with your current IP.',
+    steps: [
+      'Open your terminal.',
+      'Run crontab -e to edit your cron jobs.',
+      'Paste the line below at the end of the file, save, and exit.',
+    ],
+    code: `# Runs every 5 minutes and sends your public IP to the DDNS server
 */5 * * * * curl -s "https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN" > /dev/null`,
-  windows: `# Run in PowerShell as Administrator
-# Create a scheduled task that runs every 5 minutes
-
-$action = New-ScheduledTaskAction -Execute "powershell.exe" \`
+  },
+  windows: {
+    desc: 'Create a Windows Scheduled Task that updates your IP every 5 minutes using PowerShell.',
+    steps: [
+      'Open PowerShell as Administrator (right-click → Run as Administrator).',
+      'Paste the entire block below and press Enter.',
+      'The task will run in the background — no window pops up.',
+    ],
+    code: `$action = New-ScheduledTaskAction -Execute "powershell.exe" \`
   -Argument '-Command "Invoke-WebRequest -Uri \\"https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN\\" -UseBasicParsing"'
+
 $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -Once -At (Get-Date)
-Register-ScheduledTask -TaskName "DDNS-Update" -Action $action -Trigger $trigger -Description "Update DDNS IP"`,
-  docker: `# docker-compose.yml
-version: "3"
+
+Register-ScheduledTask -TaskName "DDNS-Update" -Action $action -Trigger $trigger -Description "Update DDNS IP"
+
+# To verify it was created:
+# Get-ScheduledTask -TaskName "DDNS-Update"
+# To remove it later:
+# Unregister-ScheduledTask -TaskName "DDNS-Update" -Confirm:$false`,
+  },
+  docker: {
+    desc: 'Run a lightweight container that updates your IP every 5 minutes — perfect for servers already running Docker.',
+    steps: [
+      'Create a docker-compose.yml file (or add the service to your existing one).',
+      'Paste the config below.',
+      'Run docker compose up -d to start it in the background.',
+    ],
+    code: `# docker-compose.yml
 services:
   ddns-updater:
     image: curlimages/curl:latest
@@ -40,32 +69,64 @@ services:
         curl -s 'https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN';
         sleep 300;
       done"`,
-  synology: `# Synology DSM > Control Panel > External Access > DDNS
-# Provider: Custom
-# Query URL:
-https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN
+  },
+  synology: {
+    desc: 'Synology NAS has built-in DDNS support — no scripts needed. Just fill in the settings below.',
+    steps: [
+      'Open DSM → Control Panel → External Access → DDNS tab.',
+      'Click Add and set Provider to "Custom".',
+      'Fill in the fields exactly as shown below.',
+    ],
+    code: `Query URL:
+  https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN
 
-# Hostname: SUBDOMAIN.dyn.devops-monk.com
-# Username/Password: leave blank (token is in the URL)`,
-  router: `# DD-WRT: Services > DDNS
-# DDNS Service: Custom
-# DYNDNS Server: ddns.devops-monk.com
-# URL: /update?domain=SUBDOMAIN&token=YOUR_TOKEN
+Hostname:
+  SUBDOMAIN.dyn.devops-monk.com
 
-# OpenWRT: /etc/config/ddns
+Username / Password:
+  Leave both blank (authentication is handled by the token in the URL)`,
+  },
+  router: {
+    desc: 'Most routers with custom DDNS support can call our API directly — no extra device needed.',
+    steps: [
+      'Log into your router admin panel.',
+      'Find the DDNS / Dynamic DNS settings (usually under Services or WAN).',
+      'Choose "Custom" as the provider and enter the details below.',
+    ],
+    code: `# ── DD-WRT ──────────────────────────────────────
+# Go to: Services → DDNS
+# DDNS Service:  Custom
+# DYNDNS Server: api.devops-monk.com
+# URL:           /update?domain=SUBDOMAIN&token=YOUR_TOKEN
+
+# ── OpenWRT ─────────────────────────────────────
+# Edit /etc/config/ddns and add:
 config service 'ddns'
   option enabled '1'
   option service_name 'custom'
   option domain 'SUBDOMAIN'
   option update_url 'https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN'
   option check_interval '5'
-  option check_unit 'minutes'`,
-  rpi: `# Raspberry Pi — works with any Linux method
-# Option 1: cron (recommended)
+  option check_unit 'minutes'
+
+# Then restart the service:
+# /etc/init.d/ddns restart`,
+  },
+  rpi: {
+    desc: 'Raspberry Pi runs standard Linux — use a cron job (simplest) or a systemd timer (auto-starts on boot).',
+    steps: [
+      'SSH into your Raspberry Pi.',
+      'Choose Option 1 (cron) for simplicity, or Option 2 (systemd) if you want it to survive reboots automatically.',
+      'Paste the commands below.',
+    ],
+    code: `# ── Option 1: Cron (recommended, quickest setup) ──
 crontab -e
+# Add this line at the end:
 */5 * * * * curl -s "https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN" > /dev/null
 
-# Option 2: systemd timer
+# ── Option 2: Systemd timer (starts on boot automatically) ──
+
+# Step 1: Create the service file
 sudo tee /etc/systemd/system/ddns-update.service << 'EOF'
 [Unit]
 Description=DDNS IP Update
@@ -75,6 +136,7 @@ Type=oneshot
 ExecStart=/usr/bin/curl -s "https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN"
 EOF
 
+# Step 2: Create the timer file
 sudo tee /etc/systemd/system/ddns-update.timer << 'EOF'
 [Unit]
 Description=Run DDNS update every 5 minutes
@@ -87,7 +149,11 @@ OnUnitActiveSec=5min
 WantedBy=timers.target
 EOF
 
-sudo systemctl enable --now ddns-update.timer`,
+# Step 3: Enable and start the timer
+sudo systemctl enable --now ddns-update.timer
+
+# To check status: systemctl status ddns-update.timer`,
+  },
 };
 
 function CopyBlock({ code }: { code: string }) {
@@ -314,10 +380,10 @@ export default function DownloadsPage() {
       <section className="container">
         <h2 className="dl-section-title">Alternative: Script-Based Updates</h2>
         <p className="dl-section-sub">
-          Prefer the command line? Use these snippets on any platform. Replace{' '}
+          Prefer the command line? Pick your platform below. Replace{' '}
           <code className="dl-inline-code">SUBDOMAIN</code> and{' '}
-          <code className="dl-inline-code">YOUR_TOKEN</code> with your actual values from the
-          dashboard.
+          <code className="dl-inline-code">YOUR_TOKEN</code> with the values from your{' '}
+          <Link to="/dashboard" style={{ color: 'var(--accent-text)', fontWeight: 600 }}>dashboard</Link>.
         </p>
 
         <div className="dl-tabs">
@@ -332,7 +398,17 @@ export default function DownloadsPage() {
           ))}
         </div>
 
-        <CopyBlock code={SNIPPETS[activeTab]} />
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.6 }}>
+            {SNIPPETS[activeTab].desc}
+          </p>
+          <ol style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.8, paddingLeft: '1.25rem', marginBottom: '1rem' }}>
+            {SNIPPETS[activeTab].steps.map((step, i) => (
+              <li key={i}>{step}</li>
+            ))}
+          </ol>
+          <CopyBlock code={SNIPPETS[activeTab].code} />
+        </div>
       </section>
 
       {/* Router Compatibility */}
@@ -340,8 +416,7 @@ export default function DownloadsPage() {
         <div className="container">
           <h2 className="dl-section-title">Router Compatibility</h2>
           <p className="dl-section-sub">
-            Our API is DuckDNS-compatible, which means most routers with custom DDNS support will
-            work out of the box.
+            Our API uses a simple HTTP GET request, so any router or NAS with custom DDNS support can call it directly — no extra software needed.
           </p>
           <div className="dl-compat-grid">
             {compatibleRouters.map((name) => (
