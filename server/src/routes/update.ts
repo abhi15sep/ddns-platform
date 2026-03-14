@@ -45,13 +45,19 @@ router.get('/', limiter, async (req: Request, res: Response) => {
   }
 
   try {
-    // Validate token
+    // Validate token and check if user is blocked
     const result = await pool.query(
-      'SELECT * FROM domains WHERE subdomain=$1 AND token=$2',
+      `SELECT d.*, u.blocked FROM domains d
+       JOIN users u ON u.id = d.user_id
+       WHERE d.subdomain=$1 AND d.token=$2`,
       [domain, token]
     );
     if (!result.rows.length) {
       res.status(403).send('KO - invalid token');
+      return;
+    }
+    if (result.rows[0].blocked) {
+      res.status(403).send('KO - account blocked');
       return;
     }
 

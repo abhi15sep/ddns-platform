@@ -10,6 +10,7 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import DomainList from './pages/DomainList';
 import DomainDetail from './pages/DomainDetail';
 import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
 
 interface ThemeContextType {
   theme: 'light' | 'dark';
@@ -132,6 +133,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPage />
             </ProtectedRoute>
           }
         />

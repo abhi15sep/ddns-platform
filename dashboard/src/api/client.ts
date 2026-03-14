@@ -43,4 +43,13 @@ export const regenerateApiToken = () => api.post('/auth/api-token/regenerate');
 
 export const deleteAccount = () => api.delete('/auth/account');
 
+// Admin
+export const checkAdmin = () => api.get('/api/admin/check');
+export const getAdminStats = () => api.get('/api/admin/stats');
+export const getAdminUsers = (search?: string) =>
+  api.get('/api/admin/users', { params: search ? { search } : {} });
+export const getAdminActivity = () => api.get('/api/admin/activity');
+export const blockUser = (userId: string) => api.post(`/api/admin/users/${userId}/block`);
+export const unblockUser = (userId: string) => api.post(`/api/admin/users/${userId}/unblock`);
+
 export default api;
