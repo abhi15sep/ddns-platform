@@ -49,6 +49,9 @@ export const regenerateApiToken = () => api.post('/auth/api-token/regenerate');
 
 export const deleteAccount = () => api.delete('/auth/account');
 
+export const exportData = (format: 'json' | 'csv' = 'json') =>
+  api.get('/auth/export-data', { params: { format }, responseType: format === 'csv' ? 'blob' : 'json' });
+
 export const forgotPassword = (email: string) =>
   api.post('/auth/forgot-password', { email });
 

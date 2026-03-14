@@ -10,6 +10,7 @@ import { pool } from '../db.js';
 import { config } from '../config.js';
 import { requireAuth, AuthUser } from '../middleware/requireAuth.js';
 import { sendPasswordResetEmail } from '../email.js';
+import { deleteDNSRecord } from '../powerdns.js';
 
 const router = Router();
 
@@ -288,17 +289,126 @@ router.post('/api-token/regenerate', requireAuth, async (req: Request, res: Resp
   res.json({ token });
 });
 
+// Export all user data (GDPR compliance)
+router.get('/export-data', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const format = req.query.format as string || 'json';
+
+  try {
+    // User profile
+    const userResult = await pool.query(
+      'SELECT email, created_at, updated_at FROM users WHERE id=$1',
+      [userId]
+    );
+    if (!userResult.rows.length) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    const profile = userResult.rows[0];
+
+    // OAuth providers
+    const oauthResult = await pool.query(
+      'SELECT provider, created_at FROM oauth_accounts WHERE user_id=$1',
+      [userId]
+    );
+
+    // Domains with config
+    const domainsResult = await pool.query(
+      'SELECT subdomain, current_ip, webhook_url, notify_email, created_at, updated_at FROM domains WHERE user_id=$1 ORDER BY created_at',
+      [userId]
+    );
+
+    // 2FA status
+    const twoFAResult = await pool.query(
+      'SELECT verified FROM totp_secrets WHERE user_id=$1',
+      [userId]
+    );
+
+    // IP history for all domains
+    const historyResult = await pool.query(
+      `SELECT ul.domain, ul.ip, ul.changed_at
+       FROM update_log ul
+       JOIN domains d ON ul.domain = d.subdomain
+       WHERE d.user_id=$1
+       ORDER BY ul.domain, ul.changed_at DESC`,
+      [userId]
+    );
+
+    if (format === 'csv') {
+      // CSV: IP history only (most useful for CSV)
+      const lines = ['domain,ip,changed_at'];
+      for (const row of historyResult.rows) {
+        lines.push(`${row.domain},${row.ip},${row.changed_at}`);
+      }
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="ddns-ip-history.csv"');
+      res.send(lines.join('\n'));
+      return;
+    }
+
+    // JSON: everything
+    const data = {
+      exported_at: new Date().toISOString(),
+      profile: {
+        email: profile.email,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+        two_factor_enabled: twoFAResult.rows.length > 0 && twoFAResult.rows[0].verified,
+        linked_providers: oauthResult.rows.map((r: any) => ({
+          provider: r.provider,
+          linked_at: r.created_at,
+        })),
+      },
+      domains: domainsResult.rows.map((d: any) => ({
+        subdomain: d.subdomain,
+        current_ip: d.current_ip,
+        webhook_url: d.webhook_url,
+        notify_email: d.notify_email,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+        ip_history: historyResult.rows
+          .filter((h: any) => h.domain === d.subdomain)
+          .map((h: any) => ({ ip: h.ip, changed_at: h.changed_at })),
+      })),
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="ddns-data-export.json"');
+    res.json(data);
+  } catch (err) {
+    console.error('Data export error:', err);
+    res.status(500).json({ error: 'Failed to export data' });
+  }
+});
+
 // Delete account
 router.delete('/account', requireAuth, async (req: Request, res: Response) => {
   const userId = (req.user as AuthUser).sub;
 
-  // Delete user (cascades to domains, oauth_accounts, totp_secrets, etc.)
-  await pool.query('DELETE FROM update_log WHERE domain IN (SELECT subdomain FROM domains WHERE user_id=$1)', [userId]);
-  await pool.query('DELETE FROM domains WHERE user_id=$1', [userId]);
-  await pool.query('DELETE FROM users WHERE id=$1', [userId]);
+  try {
+    // Get all user's domains to clean up DNS
+    const domainsResult = await pool.query('SELECT subdomain FROM domains WHERE user_id=$1', [userId]);
 
-  res.clearCookie('token');
-  res.json({ ok: true });
+    // 1. Delete DNS records via PowerDNS API
+    for (const d of domainsResult.rows) {
+      await deleteDNSRecord(d.subdomain, 'A').catch(() => {});
+      await deleteDNSRecord(d.subdomain, 'AAAA').catch(() => {});
+    }
+
+    // 2. Delete all user data from our DB
+    await pool.query('DELETE FROM update_log WHERE domain IN (SELECT subdomain FROM domains WHERE user_id=$1)', [userId]);
+    await pool.query('DELETE FROM domains WHERE user_id=$1', [userId]);
+    await pool.query('DELETE FROM totp_secrets WHERE user_id=$1', [userId]);
+    await pool.query('DELETE FROM oauth_accounts WHERE user_id=$1', [userId]);
+    await pool.query('DELETE FROM password_reset_tokens WHERE user_id=$1', [userId]);
+    await pool.query('DELETE FROM users WHERE id=$1', [userId]);
+
+    res.clearCookie('token');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Account deletion error:', err);
+    res.status(500).json({ error: 'Failed to delete account. Please contact support.' });
+  }
 });
 
 // 2FA status

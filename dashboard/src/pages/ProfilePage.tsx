@@ -8,6 +8,7 @@ import {
   getApiToken,
   regenerateApiToken,
   deleteAccount,
+  exportData,
   checkAdmin,
   get2FAStatus,
   setup2FA,
@@ -62,6 +63,9 @@ export default function ProfilePage() {
   const [setupError, setSetupError] = useState('');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [disablePassword, setDisablePassword] = useState('');
+
+  // Data export
+  const [exportLoading, setExportLoading] = useState<'json' | 'csv' | null>(null);
 
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -178,6 +182,27 @@ export default function ProfilePage() {
     } catch {
       addToast('Failed to delete account', 'error');
       setDeleteLoading(false);
+    }
+  }
+
+  async function handleExportData(format: 'json' | 'csv') {
+    setExportLoading(format);
+    try {
+      const r = await exportData(format);
+      const blob = format === 'csv'
+        ? r.data as Blob
+        : new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = format === 'csv' ? 'ddns-ip-history.csv' : 'ddns-data-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      addToast(`Data exported as ${format.toUpperCase()}`, 'success');
+    } catch {
+      addToast('Failed to export data', 'error');
+    } finally {
+      setExportLoading(null);
     }
   }
 
@@ -578,6 +603,35 @@ export default function ProfilePage() {
           </div>
         </section>
 
+        {/* Export My Data */}
+        <section>
+          <div className="section-label">Export My Data</div>
+          <div className="info-card">
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Download all your data including profile info, domains, webhook configs, and IP change history.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={exportLoading !== null}
+                onClick={() => handleExportData('json')}
+              >
+                {exportLoading === 'json' ? 'Exporting...' : 'Export as JSON'}
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                disabled={exportLoading !== null}
+                onClick={() => handleExportData('csv')}
+              >
+                {exportLoading === 'csv' ? 'Exporting...' : 'Export IP History (CSV)'}
+              </button>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
+              JSON includes everything: profile, domains, webhooks, notification settings, and IP history. CSV contains IP change history only.
+            </p>
+          </div>
+        </section>
+
         {/* Danger Zone */}
         <section>
           <div className="section-label" style={{ color: 'var(--error-text)' }}>Danger Zone</div>
@@ -631,8 +685,19 @@ export default function ProfilePage() {
             <h3 style={{ color: 'var(--error-text)', marginBottom: '0.75rem', fontSize: '1.1rem' }}>
               Delete Your Account?
             </h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.6 }}>
-              This will permanently delete your account, all domains, DNS records, and API tokens. This action <strong>cannot be undone</strong>.
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+              This will permanently delete <strong>all</strong> of your data from our platform:
+            </p>
+            <ul style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
+              <li>Your account and profile</li>
+              <li>All domains and DNS records</li>
+              <li>IP update history</li>
+              <li>Webhook and notification settings</li>
+              <li>API tokens and 2FA configuration</li>
+              <li>OAuth linked accounts</li>
+            </ul>
+            <p style={{ fontSize: '0.825rem', color: 'var(--error-text)', marginBottom: '1rem', fontWeight: 500 }}>
+              This action <strong>cannot be undone</strong>. Consider exporting your data first.
             </p>
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>

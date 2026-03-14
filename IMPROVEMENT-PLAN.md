@@ -386,12 +386,12 @@ Extended from 3 hours to 30 days with configurable range and export.
 - `dashboard/src/pages/DomainDetail.tsx` — Date range picker tabs, CSV export button, adaptive chart XAxis (time vs date), dynamic empty state
 - `dashboard/src/api/client.ts` — `getDomainHistory` accepts range parameter
 
-### 5.4 Lazy Loading / Code Splitting (HIGH)
-JS bundle is ~800KB. Split it up.
-- `React.lazy()` + `Suspense` for all page routes
-- Separate chunks: landing, auth, dashboard, admin, api-docs
-- Landing page visitors won't download admin/dashboard code
-- Add loading spinner fallback per route
+### 5.4 Lazy Loading / Code Splitting (HIGH) — DONE
+Reduced initial bundle from 811KB to 211KB.
+- `dashboard/src/App.tsx` — All 14 page imports converted to `React.lazy()` with `Suspense` fallback
+- Each page is now a separate JS chunk loaded on demand
+- Core bundle: 211KB (React, router, shared), DomainDetail: 437KB (recharts), all others: 1-33KB each
+- Landing page visitors no longer download admin, profile, or chart code
 
 ### 5.5 Automated Database Backups (HIGH)
 Protect all user data with automated backups.
@@ -408,12 +408,13 @@ Automated pipeline replaces manual SSH deploy.
   - Runs: `git pull` → `npm ci` → `npm run build` → `vite build` → `pm2 restart`
 - Requires 3 GitHub secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`
 
-### 5.7 Data Export / GDPR Compliance (MEDIUM)
-Let users export all their data from the profile page.
-- Export as JSON: user profile, domains, update history, webhook configs
-- Export as CSV: IP history per domain
-- "Download my data" button on Profile page
-- Useful for compliance and user trust
+### 5.7 Data Export / GDPR Compliance (MEDIUM) — DONE
+Let users export all their data and delete their account completely.
+- `GET /auth/export-data?format=json` — Full data export (profile, domains, webhooks, IP history)
+- `GET /auth/export-data?format=csv` — IP history CSV export
+- "Export My Data" section on Profile page with JSON and CSV download buttons
+- `DELETE /auth/account` — Complete account deletion: removes DNS records via PowerDNS API, then deletes all DB records (update_log, domains, totp_secrets, oauth_accounts, password_reset_tokens, users)
+- Delete confirmation modal lists all data that will be removed
 
 ### 5.8 Session Management (MEDIUM)
 Show and manage active login sessions.
@@ -466,7 +467,7 @@ i18n for broader audience.
 | 19 | Email notifications on IP change | 0.5 day | **DONE** |
 | 20 | Onboarding wizard for new users | 0.5 day | **DONE** |
 | 21 | Extended IP history (30d) + charts + CSV export | 1 day | **DONE** |
-| 22 | Lazy loading / code splitting (React.lazy) | 0.5 day | TODO |
+| 22 | Lazy loading / code splitting (React.lazy) | 0.5 day | **DONE** |
 | 23 | Automated database backups (cron + pg_dump) | 0.5 day | TODO |
 | 24 | CI/CD with GitHub Actions (lint, build, deploy) | 1 day | **DONE** |
 | 25 | Data export / GDPR compliance | 0.5 day | TODO |

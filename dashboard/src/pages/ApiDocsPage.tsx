@@ -321,6 +321,100 @@ r = session.post("https://api.devops-monk.com/auth/login", json={
 });`,
     },
   },
+  {
+    method: 'GET',
+    path: '/auth/export-data',
+    title: 'Export My Data',
+    desc: 'Download all your data (GDPR compliance). Returns profile, domains, webhook configs, and IP change history.',
+    auth: 'cookie',
+    params: [
+      { name: 'format', in: 'query', required: false, desc: '"json" (default) for full data export, or "csv" for IP history only' },
+    ],
+    response: `# JSON format (default)
+{
+  "exported_at": "2026-03-14T12:00:00.000Z",
+  "profile": {
+    "email": "you@example.com",
+    "created_at": "...",
+    "two_factor_enabled": false,
+    "linked_providers": []
+  },
+  "domains": [
+    {
+      "subdomain": "myhome",
+      "current_ip": "203.0.113.42",
+      "webhook_url": null,
+      "notify_email": false,
+      "ip_history": [
+        { "ip": "203.0.113.42", "changed_at": "..." }
+      ]
+    }
+  ]
+}
+
+# CSV format (?format=csv)
+domain,ip,changed_at
+myhome,203.0.113.42,2026-03-14T12:00:00.000Z`,
+    examples: {
+      curl: `# Export as JSON
+curl -H "Authorization: Bearer YOUR_API_TOKEN" \\
+  -o ddns-data-export.json \\
+  https://api.devops-monk.com/auth/export-data
+
+# Export IP history as CSV
+curl -H "Authorization: Bearer YOUR_API_TOKEN" \\
+  -o ddns-ip-history.csv \\
+  "https://api.devops-monk.com/auth/export-data?format=csv"`,
+      python: `import requests
+
+# Export as JSON
+r = requests.get("https://api.devops-monk.com/auth/export-data",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
+with open("ddns-data-export.json", "w") as f:
+    f.write(r.text)
+
+# Export as CSV
+r = requests.get("https://api.devops-monk.com/auth/export-data",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"},
+    params={"format": "csv"})
+with open("ddns-ip-history.csv", "w") as f:
+    f.write(r.text)`,
+      javascript: `// Export as JSON
+const res = await fetch("https://api.devops-monk.com/auth/export-data", {
+  headers: { "Authorization": "Bearer YOUR_API_TOKEN" }
+});
+const data = await res.json();
+
+// Export as CSV
+const csvRes = await fetch(
+  "https://api.devops-monk.com/auth/export-data?format=csv",
+  { headers: { "Authorization": "Bearer YOUR_API_TOKEN" } }
+);
+const csv = await csvRes.text();`,
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/auth/account',
+    title: 'Delete Account',
+    desc: 'Permanently delete your account and all associated data: domains, DNS records, IP history, webhooks, 2FA, OAuth links, and API tokens. This cannot be undone.',
+    auth: 'cookie',
+    response: `{ "ok": true }`,
+    examples: {
+      curl: `# WARNING: This permanently deletes your account!
+curl -X DELETE https://api.devops-monk.com/auth/account \\
+  -H "Authorization: Bearer YOUR_API_TOKEN"`,
+      python: `# WARNING: This permanently deletes your account!
+r = requests.delete("https://api.devops-monk.com/auth/account",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"})
+print(r.json())  # {"ok": true}`,
+      javascript: `// WARNING: This permanently deletes your account!
+const res = await fetch("https://api.devops-monk.com/auth/account", {
+  method: "DELETE",
+  headers: { "Authorization": "Bearer YOUR_API_TOKEN" }
+});`,
+    },
+  },
 ];
 
 function CopyBtn({ text }: { text: string }) {
