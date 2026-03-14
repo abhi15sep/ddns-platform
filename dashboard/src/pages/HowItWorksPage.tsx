@@ -404,17 +404,137 @@ export default function HowItWorksPage() {
           </div>
         </section>
 
-        {/* Important Note */}
+        {/* Port Forwarding Explained */}
         <section style={styles.section}>
-          <div style={styles.noteBox}>
-            <h3 style={styles.noteTitle}>Important: Port Forwarding</h3>
+          <h2 style={styles.sectionTitle}>One More Thing: Port Forwarding</h2>
+          <p style={styles.sectionDesc}>
+            DDNS solves <strong>half</strong> the problem — it gives your home a stable address.
+            But there's a second piece: <strong>port forwarding</strong>. Here's why you need both:
+          </p>
+
+          {/* DDNS vs Port Forwarding SVG */}
+          <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflowX: 'auto' }}>
+            <svg viewBox="0 0 800 260" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'block' }}>
+              <defs>
+                <marker id="pfArrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
+                </marker>
+                <marker id="pfArrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#059669" />
+                </marker>
+              </defs>
+
+              {/* Labels */}
+              <text x="400" y="24" textAnchor="middle" fill="#1e293b" fontSize="14" fontWeight="700" fontFamily="system-ui">What each piece does</text>
+
+              {/* DDNS Row */}
+              <rect x="20" y="40" width="760" height="90" rx="10" fill="#eef2ff" stroke="#c7d2fe" strokeWidth="1.5" />
+              <text x="40" y="62" fill="#4338ca" fontSize="11" fontWeight="700" fontFamily="system-ui">DDNS (what we provide)</text>
+              <text x="40" y="80" fill="#4338ca" fontSize="11" fontFamily="system-ui">Translates a name into your current IP</text>
+
+              <rect x="50" y="92" width="200" height="28" rx="6" fill="white" stroke="#c7d2fe" strokeWidth="1" />
+              <text x="150" y="111" textAnchor="middle" fill="#4338ca" fontSize="11" fontWeight="600" fontFamily="monospace">myhome.dyn.devops-monk.com</text>
+
+              <line x1="260" y1="106" x2="340" y2="106" stroke="#4f46e5" strokeWidth="2" markerEnd="url(#pfArrow)" />
+              <text x="300" y="98" textAnchor="middle" fill="#4f46e5" fontSize="9" fontFamily="system-ui">resolves to</text>
+
+              <rect x="350" y="92" width="160" height="28" rx="6" fill="white" stroke="#c7d2fe" strokeWidth="1" />
+              <text x="430" y="111" textAnchor="middle" fill="#4338ca" fontSize="12" fontWeight="600" fontFamily="monospace">98.51.100.42</text>
+
+              <text x="540" y="111" fill="#64748b" fontSize="11" fontFamily="system-ui">← Your router's public IP</text>
+
+              {/* Port Forwarding Row */}
+              <rect x="20" y="145" width="760" height="100" rx="10" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1.5" />
+              <text x="40" y="167" fill="#047857" fontSize="11" fontWeight="700" fontFamily="system-ui">Port Forwarding (you set up on your router)</text>
+              <text x="40" y="185" fill="#047857" fontSize="11" fontFamily="system-ui">Routes incoming traffic to the right device on your local network</text>
+
+              <rect x="50" y="197" width="160" height="28" rx="6" fill="white" stroke="#a7f3d0" strokeWidth="1" />
+              <text x="130" y="216" textAnchor="middle" fill="#047857" fontSize="11" fontWeight="600" fontFamily="system-ui">Incoming on port 443</text>
+
+              <line x1="220" y1="211" x2="300" y2="211" stroke="#059669" strokeWidth="2" markerEnd="url(#pfArrowGreen)" />
+              <text x="260" y="203" textAnchor="middle" fill="#059669" fontSize="9" fontFamily="system-ui">forward to</text>
+
+              <rect x="310" y="197" width="200" height="28" rx="6" fill="white" stroke="#a7f3d0" strokeWidth="1" />
+              <text x="410" y="216" textAnchor="middle" fill="#047857" fontSize="11" fontWeight="600" fontFamily="monospace">192.168.1.50:443</text>
+
+              <text x="540" y="216" fill="#64748b" fontSize="11" fontFamily="system-ui">← Your server's local IP</text>
+            </svg>
+          </div>
+
+          {/* Analogy */}
+          <div style={{ ...styles.noteBox, marginTop: '1.5rem' }}>
+            <h3 style={styles.noteTitle}>Think of it like a building</h3>
             <p style={styles.noteDesc}>
-              DDNS makes your home <strong>findable</strong> by giving it a stable domain name. But to make specific services
-              <strong> reachable</strong>, you also need to set up <strong>port forwarding</strong> on your router.
+              <strong>DDNS</strong> is like giving your building a street address — people can find your building.
             </p>
             <p style={styles.noteDesc}>
-              For example, to access a web server at home, you'd forward port 80/443 on your router to your server's local IP.
-              DDNS handles the "what address to use" part — port forwarding handles the "how to get through the router" part.
+              <strong>Port forwarding</strong> is like the lobby directory — it tells visitors which floor and room to go to
+              once they're inside the building.
+            </p>
+            <p style={{ ...styles.noteDesc, marginBottom: 0 }}>
+              Without DDNS, nobody can find your building. Without port forwarding, they find the building but can't get to the right room.
+              <strong> You need both.</strong>
+            </p>
+          </div>
+
+          {/* Common Ports Table */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.75rem' }}>Common ports to forward</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="domain-table" style={{ minWidth: '500px' }}>
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Port</th>
+                    <th>What it's for</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['Web Server', '80 / 443', 'Hosting a website or web app from home'],
+                    ['SSH', '22', 'Remote terminal access to a Linux machine'],
+                    ['Minecraft', '25565', 'Hosting a Minecraft server for friends'],
+                    ['Plex / Jellyfin', '32400 / 8096', 'Streaming your media library remotely'],
+                    ['Home Assistant', '8123', 'Accessing smart home dashboard'],
+                    ['WireGuard VPN', '51820 (UDP)', 'Connecting securely to your home network'],
+                    ['Synology DSM', '5000 / 5001', 'Accessing your NAS admin panel'],
+                  ].map(([service, port, desc]) => (
+                    <tr key={service}>
+                      <td><strong>{service}</strong></td>
+                      <td><code style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>{port}</code></td>
+                      <td>{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* How to set up port forwarding */}
+          <div style={{ marginTop: '1.5rem', background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.5rem' }}>How to set up port forwarding</h3>
+            <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6, marginBottom: '1rem' }}>
+              Every router is different, but the general steps are:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {[
+                { num: '1', text: 'Log into your router (usually 192.168.1.1 or 192.168.0.1 in your browser)' },
+                { num: '2', text: 'Find the "Port Forwarding", "NAT", or "Virtual Servers" section' },
+                { num: '3', text: 'Add a rule: external port → internal IP + internal port' },
+                { num: '4', text: 'Save and test from outside your network (e.g. using mobile data)' },
+              ].map((step) => (
+                <div key={step.num} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>{step.num}</span>
+                  <span style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.5 }}>{step.text}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.6, marginTop: '1rem' }}>
+              Need help finding the port forwarding page on your specific router?{' '}
+              <a href="https://portforward.com/router.htm" target="_blank" rel="noreferrer" style={{ color: '#4f46e5', fontWeight: 600 }}>
+                portforward.com
+              </a>{' '}
+              has step-by-step guides with screenshots for <strong>hundreds of router models</strong> — just find your brand and model.
             </p>
           </div>
         </section>
