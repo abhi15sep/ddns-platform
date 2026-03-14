@@ -60,15 +60,10 @@ sudo apt install -y build-essential python3
 sudo npm install -g pm2
 ```
 
-### Install Caddy
+### Nginx + Certbot (skip if Nginx is already installed from gift site)
 
 ```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
-  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
-  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install -y caddy
+sudo apt install -y nginx certbot python3-certbot-nginx
 ```
 
 ## Step 3: Set Up Databases
@@ -124,14 +119,14 @@ nano .env
 Set production values:
 
 ```env
-PORT=3000
+PORT=3001
 NODE_ENV=production
 DATABASE_URL=postgresql://ddnsuser:STRONG_PG_PASSWORD@localhost:5432/ddns
 PDNS_API_URL=http://127.0.0.1:8081/api/v1
 PDNS_API_KEY=your-powerdns-api-key
 DDNS_ZONE=dyn.devops-monk.com
 JWT_SECRET=$(openssl rand -hex 32)
-APP_URL=https://devops-monk.com
+APP_URL=https://ddns.devops-monk.com
 API_URL=https://api.devops-monk.com
 
 # OAuth (optional, configure after initial deploy)
@@ -163,43 +158,26 @@ npm run build
 cd ..
 ```
 
-## Step 6: Configure Caddy (Reverse Proxy + HTTPS)
+## Step 6: Add Nginx Config (does NOT touch existing gift site config)
 
-Edit `/etc/caddy/Caddyfile`:
-
-```caddyfile
-devops-monk.com {
-    root * /opt/ddns-platform/dashboard/dist
-    file_server
-    try_files {path} /index.html
-
-    # API proxy for same-domain requests (if not using api subdomain)
-    handle /api/* {
-        reverse_proxy localhost:3000
-    }
-    handle /auth/* {
-        reverse_proxy localhost:3000
-    }
-    handle /update* {
-        reverse_proxy localhost:3000
-    }
-    handle /health* {
-        reverse_proxy localhost:3000
-    }
-}
-
-# Alternative: separate API subdomain
-api.devops-monk.com {
-    reverse_proxy localhost:3000
-}
-```
+> Your VPS already uses Nginx for `gift.devops-monk.com`. We add a separate config file.
 
 ```bash
-sudo systemctl restart caddy
-sudo systemctl enable caddy
+cp /opt/ddns-platform/dns/nginx-ddns.conf /etc/nginx/sites-available/ddns
+ln -s /etc/nginx/sites-available/ddns /etc/nginx/sites-enabled/ddns
+
+# Test config (checks ALL sites including gift)
+nginx -t
+
+# If test passes, reload
+systemctl reload nginx
 ```
 
-Caddy automatically provisions Let's Encrypt HTTPS certificates.
+Then add HTTPS with Certbot:
+```bash
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d ddns.devops-monk.com -d api.devops-monk.com
+```
 
 ## Step 7: Start the Backend with PM2
 
@@ -230,7 +208,7 @@ pm2 monit               # Real-time monitoring
 sudo ufw allow 22/tcp     # SSH
 sudo ufw allow 53/tcp     # DNS
 sudo ufw allow 53/udp     # DNS
-sudo ufw allow 80/tcp     # HTTP (Caddy redirects to HTTPS)
+sudo ufw allow 80/tcp     # HTTP (Nginx redirects to HTTPS)
 sudo ufw allow 443/tcp    # HTTPS
 sudo ufw enable
 ```
@@ -307,7 +285,7 @@ npm run migrate
 
 ```bash
 # /etc/cron.d/ddns-healthcheck
-*/5 * * * * root curl -sf https://api.devops-monk.com/health > /dev/null || systemctl restart caddy && pm2 restart ddns-api
+*/5 * * * * root curl -sf https://api.devops-monk.com/health > /dev/null || systemctl restart nginx && pm2 restart ddns-api
 ```
 
 ### PM2 monitoring
@@ -324,6 +302,6 @@ pm2 monit                     # Real-time dashboard
 | Dashboard shows blank page | `ls /opt/ddns-platform/dashboard/dist/` — did `npm run build` succeed? |
 | API returns 502 | `pm2 logs ddns-api` — is the server running? |
 | DNS not resolving | `dig @YOUR_VPS_IP dyn.devops-monk.com SOA` — is PowerDNS running? |
-| HTTPS not working | `sudo caddy validate --config /etc/caddy/Caddyfile` |
+| HTTPS not working | `sudo nginx -t` and check `tail -50 /var/log/nginx/error.log` |
 | OAuth redirect fails | Check `APP_URL` and `API_URL` in `.env` match your actual domain |
 | Database connection error | `sudo systemctl status postgresql` |

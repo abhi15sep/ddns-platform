@@ -4,7 +4,7 @@ import { z } from 'zod';
 dotenv.config({ path: '../.env' });
 
 const envSchema = z.object({
-  PORT: z.string().default('3000'),
+  PORT: z.string().default('3001'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().url(),
   PDNS_API_URL: z.string().url(),
@@ -12,7 +12,7 @@ const envSchema = z.object({
   DDNS_ZONE: z.string().min(1),
   JWT_SECRET: z.string().min(16),
   APP_URL: z.string().url().default('http://localhost:5173'),
-  API_URL: z.string().url().default('http://localhost:3000'),
+  API_URL: z.string().url().default('http://localhost:3001'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),

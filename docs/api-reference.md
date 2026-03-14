@@ -4,7 +4,7 @@ Complete reference for all backend API endpoints.
 
 ## Base URL
 
-- **Development**: `http://localhost:3000`
+- **Development**: `http://localhost:3001`
 - **Production**: `https://api.devops-monk.com`
 
 ## Authentication

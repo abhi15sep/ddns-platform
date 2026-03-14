@@ -83,10 +83,10 @@ All API calls are centralized in this file using Axios with `withCredentials: tr
 In `vite.config.ts`, the Vite dev server proxies API requests to the backend:
 
 ```
-/api/*    → http://localhost:3000
-/auth/*   → http://localhost:3000
-/update/* → http://localhost:3000
-/health/* → http://localhost:3000
+/api/*    → http://localhost:3001
+/auth/*   → http://localhost:3001
+/update/* → http://localhost:3001
+/health/* → http://localhost:3001
 ```
 
 This avoids CORS issues during development.
@@ -99,7 +99,7 @@ npm install
 npm run build
 ```
 
-Output goes to `dashboard/dist/`. Serve with Caddy or any static file server. Configure `try_files {path} /index.html` for SPA routing.
+Output goes to `dashboard/dist/`. Serve with Nginx (or any static file server). Configure `try_files $uri $uri/ /index.html` for SPA routing.
 
 ## Customization
 

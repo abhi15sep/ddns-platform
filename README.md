@@ -3,8 +3,26 @@
 A self-hosted Dynamic DNS platform (better than DuckDNS) with a web dashboard, SSO login, full DNS control, and a desktop app for non-developers.
 
 **Domain**: `devops-monk.com` (Porkbun)
-**VPS**: Hostinger VPS
+**VPS**: Hostinger VPS (also hosts `gift.devops-monk.com`)
 **DDNS Zone**: `dyn.devops-monk.com` — user subdomains like `myhome.dyn.devops-monk.com`
+
+---
+
+> **IMPORTANT — Existing Site Safety**
+>
+> Your Hostinger VPS already runs `gift.devops-monk.com` (Next.js + Nginx + PM2 on port 3000).
+> This DDNS platform is designed to coexist safely:
+> - DDNS API runs on **port 3001** (not 3000) to avoid conflicts
+> - We **add** Nginx config files — we never edit or replace existing ones
+> - Your existing `gift.devops-monk.com` Nginx config stays untouched
+> - MySQL is already installed for your gift site — we reuse it (just add a new database)
+>
+> **What could go wrong and how we prevent it:**
+> - Port conflict → DDNS uses 3001, gift stays on 3000
+> - Nginx config overwrite → we create a separate file in `sites-available`
+> - MySQL conflict → separate `powerdns` database, separate `pdns` user
+> - PM2 conflict → DDNS process is named `ddns-api`, gift process keeps its name
+> - Firewall issues → we only add rules, never remove existing ones
 
 ---
 
@@ -47,19 +65,38 @@ User Device (cron job / router / desktop app)
     │
     │  GET /update?domain=myhome&token=xxx
     ▼
-┌──────────────────────────┐
-│  Node.js Backend (Express) │──► PostgreSQL (users, tokens, logs)
-│  Port 3000                 │──► PowerDNS REST API (port 8081)
-└──────────────────────────┘
-    │                              │
-    ▼                              ▼
-React Dashboard              PowerDNS + MySQL
-(Vite SPA, served by Caddy)  (Authoritative DNS, port 53)
-                                   │
-                                   ▼
-                              Internet resolvers
-                              (anyone doing DNS lookup)
+┌───────────────────────────────┐
+│  Nginx (reverse proxy + HTTPS) │
+│  Port 80/443                    │
+└───────┬───────────┬─────────────┘
+        │           │
+        ▼           ▼
+  ┌──────────┐  ┌───────────┐
+  │ gift site │  │ DDNS API  │
+  │ port 3000 │  │ port 3001 │──► PostgreSQL (users, tokens, logs)
+  └──────────┘  └───────────┘──► PowerDNS REST API (port 8081)
+                      │
+                      ▼
+                PowerDNS + MySQL
+                (Authoritative DNS, port 53)
+                      │
+                      ▼
+                Internet resolvers
 ```
+
+**Port allocation on your VPS:**
+
+| Port | Service | Notes |
+|------|---------|-------|
+| 22 | SSH | Already open |
+| 53 | PowerDNS | DNS queries (NEW) |
+| 80 | Nginx | Already open (gift site) |
+| 443 | Nginx | Already open (gift site) |
+| 3000 | Gift site (Next.js) | Already in use — DO NOT TOUCH |
+| 3001 | DDNS API (Express) | NEW |
+| 3306 | MySQL | Already in use (gift site) — we add a new database |
+| 5432 | PostgreSQL | NEW |
+| 8081 | PowerDNS API | NEW (localhost only) |
 
 ---
 
@@ -69,7 +106,7 @@ React Dashboard              PowerDNS + MySQL
 ddns-platform/
 ├── server/                  # Backend API (Node.js + Express + TypeScript)
 │   └── src/
-│       ├── app.ts           # Express entry point
+│       ├── app.ts           # Express entry point (port 3001)
 │       ├── config.ts        # Environment validation
 │       ├── db.ts            # PostgreSQL connection
 │       ├── powerdns.ts      # PowerDNS REST API client
@@ -90,9 +127,10 @@ ddns-platform/
 │       ├── preload/         # Secure bridge to UI
 │       └── renderer/        # Setup wizard, status, settings UI
 │
-├── dns/                     # PowerDNS SQL schemas
+├── dns/                     # PowerDNS SQL schemas + Nginx config
 │   ├── schema.sql           # MySQL tables for PowerDNS
-│   └── init-zone.sql        # Creates dyn.devops-monk.com zone
+│   ├── init-zone.sql        # Creates dyn.devops-monk.com zone
+│   └── nginx-ddns.conf      # Nginx server blocks for DDNS
 │
 ├── db/migrations/           # PostgreSQL migration files (run in order)
 │   ├── 001_create_users.sql
@@ -117,7 +155,7 @@ ddns-platform/
 - Git
 
 **For production** (Hostinger VPS):
-- Hostinger VPS with Ubuntu 22.04+ (any plan with 1+ vCPU, 1+ GB RAM)
+- Your existing Hostinger VPS with `gift.devops-monk.com` already running
 - SSH access to the VPS
 - Porkbun account with `devops-monk.com` domain
 
@@ -142,7 +180,7 @@ cp .env.example .env
 
 Open `.env` and set these for local dev:
 ```env
-PORT=3000
+PORT=3001
 NODE_ENV=development
 DATABASE_URL=postgresql://ddnsuser:password@localhost:5432/ddns
 PDNS_API_URL=http://127.0.0.1:8081/api/v1
@@ -150,7 +188,7 @@ PDNS_API_KEY=dev-api-key-change-in-production
 DDNS_ZONE=dyn.devops-monk.com
 JWT_SECRET=dev-jwt-secret-change-in-production-min-16-chars
 APP_URL=http://localhost:5173
-API_URL=http://localhost:3000
+API_URL=http://localhost:3001
 ```
 
 ### Step 3: Start the databases
@@ -170,7 +208,13 @@ docker compose ps
 ```
 You should see 3 containers in "running" state.
 
-### Step 4: Run database migrations
+### Step 4: Install dependencies
+
+```bash
+npm install
+```
+
+### Step 5: Run database migrations
 
 ```bash
 npm run migrate
@@ -180,23 +224,17 @@ npm run migrate
 
 **If you get a connection error**: Wait 10 seconds for PostgreSQL to fully start, then try again.
 
-### Step 5: Install dependencies
-
-```bash
-npm install
-```
-
 ### Step 6: Start the backend server
 
 ```bash
 npm run dev:server
 ```
 
-**Expected output**: `DDNS API running on port 3000`
+**Expected output**: `DDNS API running on port 3001`
 
 **Test it**: Open a new terminal tab and run:
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3001/health
 ```
 You should see: `{"status":"ok","timestamp":"..."}`
 
@@ -217,7 +255,7 @@ Open http://localhost:5173 in your browser. You should see the login page.
 3. You'll be redirected to the dashboard
 4. Create a subdomain (e.g., `test`)
 5. Copy the update URL shown on the domain detail page
-6. Run it in terminal: `curl "http://localhost:3000/update?domain=test&token=YOUR_TOKEN"`
+6. Run it in terminal: `curl "http://localhost:3001/update?domain=test&token=YOUR_TOKEN"`
 7. You should see `OK` and the IP will appear in the dashboard
 
 ### Step 9: Stop everything when done
@@ -232,102 +270,105 @@ docker compose down
 
 ## Step-by-Step: Hostinger VPS Production Deployment
 
-> These steps deploy the platform to your Hostinger VPS so it's live on the internet.
+> These steps deploy DDNS alongside your existing gift site. Each step explains what it does and what it does NOT touch.
 
-### Step 1: Get your Hostinger VPS IP
-
-1. Log in to [hpanel.hostinger.com](https://hpanel.hostinger.com)
-2. Go to **VPS** → select your server
-3. Note down the **IP address** (e.g., `154.x.x.x`) — you'll need this everywhere
-4. Note the **root password** or set up SSH keys
-
-### Step 2: SSH into your VPS
+### Step 1: SSH into your VPS
 
 ```bash
 ssh root@YOUR_HOSTINGER_VPS_IP
 ```
 
-If using password auth (Hostinger default), enter the password from your panel.
+### Step 2: Check your existing setup is working
 
-### Step 3: Update the system
-
+**Before changing anything**, verify the gift site is healthy:
 ```bash
-apt update && apt upgrade -y
+# Check Nginx is running
+systemctl status nginx
+
+# Check your gift site process
+pm2 status
+
+# Check MySQL is running
+systemctl status mysql
+
+# Test the gift site
+curl -I https://gift.devops-monk.com
 ```
 
-### Step 4: Install Node.js 20
+**Write down the output.** If anything breaks later, you can compare.
 
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
-```
-
-**Verify**: `node --version` should show `v20.x.x`
-
-### Step 5: Install PostgreSQL
+### Step 3: Install PostgreSQL (new — does NOT affect MySQL or gift site)
 
 ```bash
 apt install -y postgresql postgresql-contrib
 ```
 
-**Create the database and user**:
+**What this does**: Installs PostgreSQL on port 5432. This is a completely separate database server from MySQL. Your gift site uses MySQL — we're adding PostgreSQL for the DDNS app data.
+
+**Create the DDNS database and user**:
 ```bash
 sudo -u postgres psql
 ```
 
-Inside the PostgreSQL prompt, run:
 ```sql
 CREATE USER ddnsuser WITH PASSWORD 'PICK_A_STRONG_PASSWORD';
 CREATE DATABASE ddns OWNER ddnsuser;
 \q
 ```
 
-**Write down the password** — you'll need it for `.env`.
+**Save this password** — you'll need it for `.env`.
 
-### Step 6: Install MySQL
+### Step 4: Create PowerDNS MySQL database (uses existing MySQL — new database only)
 
-```bash
-apt install -y mysql-server
-```
+> This adds a new `powerdns` database to your existing MySQL server. It does NOT touch your gift site's database.
 
-**Create the PowerDNS database**:
 ```bash
 mysql -u root
 ```
 
 ```sql
+-- Check existing databases first (your gift DB should be listed)
+SHOW DATABASES;
+
+-- Create a NEW database for PowerDNS (does not affect other databases)
 CREATE DATABASE powerdns;
-CREATE USER 'pdns'@'localhost' IDENTIFIED BY 'PICK_ANOTHER_STRONG_PASSWORD';
+CREATE USER 'pdns'@'localhost' IDENTIFIED BY 'PICK_A_PDNS_PASSWORD';
 GRANT ALL ON powerdns.* TO 'pdns'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
 
-**Write down this password too.**
+**Save this password too.**
 
-### Step 7: Install PowerDNS
+### Step 5: Install PowerDNS
 
 ```bash
 apt install -y pdns-server pdns-backend-mysql
 ```
 
-**Import the PowerDNS schema**:
+### Step 6: Clone the DDNS project
+
 ```bash
-# First, clone your project
 mkdir -p /opt/ddns-platform
 cd /opt/ddns-platform
 git clone YOUR_REPO_URL .
-
-# Import the schema
-mysql -u pdns -p powerdns < dns/schema.sql
 ```
 
-**Configure MySQL backend** — edit `/etc/powerdns/pdns.d/gmysql.conf`:
+### Step 7: Import PowerDNS schema and create DNS zone
+
+```bash
+mysql -u pdns -p powerdns < dns/schema.sql
+mysql -u pdns -p powerdns < dns/init-zone.sql
+```
+
+### Step 8: Configure PowerDNS
+
+**MySQL backend** — create `/etc/powerdns/pdns.d/gmysql.conf`:
 ```bash
 nano /etc/powerdns/pdns.d/gmysql.conf
 ```
 
-Paste:
+Paste (replace password):
 ```ini
 launch=gmysql
 gmysql-host=127.0.0.1
@@ -336,15 +377,15 @@ gmysql-password=YOUR_PDNS_MYSQL_PASSWORD
 gmysql-dbname=powerdns
 ```
 
-**Enable the HTTP API** — edit `/etc/powerdns/pdns.conf`:
+**HTTP API** — edit `/etc/powerdns/pdns.conf`:
 ```bash
 nano /etc/powerdns/pdns.conf
 ```
 
-Add these lines at the bottom:
+Add at the bottom:
 ```ini
 api=yes
-api-key=GENERATE_WITH_openssl_rand_-hex_32
+api-key=PASTE_YOUR_API_KEY_HERE
 webserver=yes
 webserver-address=127.0.0.1
 webserver-port=8081
@@ -354,24 +395,27 @@ webserver-allow-from=127.0.0.1
 Generate the API key:
 ```bash
 openssl rand -hex 32
-# Copy the output and paste it as api-key above
-# Also save it — you need it for .env
+# Copy the output → paste as api-key above
+# Also save it for .env
 ```
 
-**Fix port 53 conflict** (Ubuntu uses systemd-resolved on port 53):
+**Fix port 53 conflict** (Ubuntu's systemd-resolved uses port 53):
 ```bash
+# Check if systemd-resolved is running
+systemctl status systemd-resolved
+
+# If it is, stop and disable it
 systemctl stop systemd-resolved
 systemctl disable systemd-resolved
 
-# Fix DNS resolution for the server itself
+# Set DNS resolvers so the server itself can resolve domains
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
 echo "nameserver 1.1.1.1" >> /etc/resolv.conf
 ```
 
-**Create the DDNS zone**:
-```bash
-mysql -u pdns -p powerdns < dns/init-zone.sql
-```
+> **Warning**: After disabling systemd-resolved, verify your gift site still works:
+> `curl -I https://gift.devops-monk.com` — if it works, continue. If not, your gift site
+> was using systemd-resolved, and the `/etc/resolv.conf` fix above handles it.
 
 **Start PowerDNS**:
 ```bash
@@ -384,31 +428,33 @@ systemctl enable pdns
 dig @127.0.0.1 dyn.devops-monk.com SOA
 ```
 
-You should see a response with `ns1.devops-monk.com` in the ANSWER section.
-
-### Step 8: Install build tools and PM2
+### Step 9: Install build tools (if not already installed)
 
 ```bash
+# Check if already installed (likely yes from gift site)
+node --version      # Should be v18+ or v20+
+npm --version
+pm2 --version
+
+# Install build-essential if needed
 apt install -y build-essential python3
-npm install -g pm2
 ```
 
-### Step 9: Install and configure the app
+### Step 10: Configure and build the DDNS app
 
 ```bash
 cd /opt/ddns-platform
 npm install
 ```
 
-**Create the production `.env`**:
+**Create production `.env`**:
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-Set these values (replace placeholders with your actual passwords):
 ```env
-PORT=3000
+PORT=3001
 NODE_ENV=production
 DATABASE_URL=postgresql://ddnsuser:YOUR_PG_PASSWORD@localhost:5432/ddns
 PDNS_API_URL=http://127.0.0.1:8081/api/v1
@@ -419,102 +465,118 @@ APP_URL=https://ddns.devops-monk.com
 API_URL=https://api.devops-monk.com
 ```
 
-Generate the JWT secret:
+Generate JWT secret:
 ```bash
 openssl rand -hex 32
 ```
 
-### Step 10: Run migrations and build
-
+**Run migrations and build**:
 ```bash
-# Create PostgreSQL tables
 npm run migrate
-
-# Build the server
 cd server && npm run build && cd ..
-
-# Build the dashboard
 cd dashboard && npm run build && cd ..
 ```
 
-### Step 11: Start the backend with PM2
+### Step 11: Start DDNS backend with PM2
 
 ```bash
 cd /opt/ddns-platform/server
 pm2 start dist/app.js --name ddns-api
 pm2 save
-pm2 startup
-# Run the command it prints (starts PM2 on boot)
 ```
 
-**Verify**: `pm2 status` should show `ddns-api` as `online`.
+**Verify both apps are running**:
+```bash
+pm2 status
+```
 
-### Step 12: Install and configure Caddy (HTTPS + reverse proxy)
+You should see both your gift site process AND `ddns-api` as `online`.
+
+**Test the DDNS API**:
+```bash
+curl http://localhost:3001/health
+```
+
+### Step 12: Add Nginx config for DDNS (does NOT touch gift site config)
+
+> We're adding a NEW config file. Your existing gift site Nginx config stays exactly as it is.
+
+**First, check your existing Nginx configs** (so you know what's there):
+```bash
+ls /etc/nginx/sites-enabled/
+```
+
+**Copy the DDNS Nginx config**:
+```bash
+cp /opt/ddns-platform/dns/nginx-ddns.conf /etc/nginx/sites-available/ddns
+ln -s /etc/nginx/sites-available/ddns /etc/nginx/sites-enabled/ddns
+```
+
+**Test Nginx config** (this checks ALL configs including your gift site — if it fails, don't reload):
+```bash
+nginx -t
+```
+
+If it says `syntax is ok` and `test is successful`, reload:
+```bash
+systemctl reload nginx
+```
+
+**If `nginx -t` fails**: Read the error. It's likely a typo in the new file. Edit `/etc/nginx/sites-available/ddns` and fix it. Your gift site is still running fine because we haven't reloaded Nginx yet.
+
+### Step 13: Add HTTPS with Certbot (does NOT touch existing certificates)
 
 ```bash
-apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
-  | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
-  | tee /etc/apt/sources.list.d/caddy-stable.list
-apt update && apt install -y caddy
+# Install certbot if not already installed
+apt install -y certbot python3-certbot-nginx
+
+# Get certificates for the NEW subdomains only
+certbot --nginx -d ddns.devops-monk.com -d api.devops-monk.com
 ```
 
-**Configure Caddy** — edit `/etc/caddy/Caddyfile`:
+Certbot will:
+- Get Let's Encrypt certificates for the two new subdomains
+- Auto-modify the Nginx config to add SSL
+- NOT touch your existing `gift.devops-monk.com` certificate
+
+**Verify HTTPS auto-renewal**:
 ```bash
-nano /etc/caddy/Caddyfile
+certbot renew --dry-run
 ```
 
-Replace the entire file with:
-```caddyfile
-ddns.devops-monk.com {
-    root * /opt/ddns-platform/dashboard/dist
-    file_server
-    try_files {path} /index.html
-
-    handle /api/* {
-        reverse_proxy localhost:3000
-    }
-    handle /auth/* {
-        reverse_proxy localhost:3000
-    }
-    handle /update* {
-        reverse_proxy localhost:3000
-    }
-    handle /health* {
-        reverse_proxy localhost:3000
-    }
-}
-
-api.devops-monk.com {
-    reverse_proxy localhost:3000
-}
-```
-
-**Start Caddy**:
-```bash
-systemctl restart caddy
-systemctl enable caddy
-```
-
-Caddy automatically gets Let's Encrypt HTTPS certificates — no certbot needed.
-
-### Step 13: Set up the firewall
+### Step 14: Open port 53 in firewall (for DNS queries)
 
 ```bash
-ufw allow 22/tcp     # SSH
-ufw allow 53/tcp     # DNS queries
-ufw allow 53/udp     # DNS queries
-ufw allow 80/tcp     # HTTP (Caddy redirects to HTTPS)
-ufw allow 443/tcp    # HTTPS
-ufw enable
+# Check current firewall rules first
+ufw status
+
+# Add DNS ports (does NOT remove any existing rules)
+ufw allow 53/tcp
+ufw allow 53/udp
 ```
 
-Type `y` when it asks to confirm.
+**Do NOT** open ports 3001, 5432, or 8081.
 
-**Important**: Do NOT open ports 3000, 5432, 3306, or 8081. They should only be accessible locally.
+### Step 15: Verify everything works (including gift site!)
 
-### Step 14: Set up automated backups
+```bash
+# 1. Gift site still working? (MOST IMPORTANT)
+curl -I https://gift.devops-monk.com
+
+# 2. DDNS API
+curl https://api.devops-monk.com/health
+
+# 3. DDNS dashboard
+curl -I https://ddns.devops-monk.com
+
+# 4. PowerDNS
+dig @127.0.0.1 dyn.devops-monk.com SOA
+
+# 5. Both PM2 processes healthy
+pm2 status
+```
+
+### Step 16: Set up automated backups
 
 ```bash
 mkdir -p /var/backups/ddns
@@ -528,7 +590,7 @@ DATE=$(date +%Y-%m-%d)
 BACKUP_DIR=/var/backups/ddns
 
 pg_dump -U ddnsuser ddns > $BACKUP_DIR/ddns-$DATE.sql
-mysqldump -u pdns -pYOUR_MYSQL_PASSWORD powerdns > $BACKUP_DIR/powerdns-$DATE.sql
+mysqldump -u pdns -pYOUR_PDNS_MYSQL_PASSWORD powerdns > $BACKUP_DIR/powerdns-$DATE.sql
 
 # Keep only last 30 days
 find $BACKUP_DIR -name "*.sql" -mtime +30 -delete
@@ -543,6 +605,7 @@ chmod +x /etc/cron.daily/ddns-backup
 ## Step-by-Step: Porkbun DNS Delegation
 
 > This tells the internet that your Hostinger VPS is the authoritative DNS server for `dyn.devops-monk.com`.
+> These are NEW records — they do NOT affect your existing `gift.devops-monk.com` DNS.
 
 ### Step 1: Log in to Porkbun
 
@@ -552,7 +615,11 @@ Go to [porkbun.com](https://porkbun.com) and log in.
 
 Click **Domain Management** → find `devops-monk.com` → click **DNS**.
 
-### Step 3: Add the A record for your nameserver
+### Step 3: Verify your existing gift record is there
+
+You should see an existing A record for `gift` pointing to your VPS IP. **Do not touch it.**
+
+### Step 4: Add the A record for your nameserver
 
 This tells the internet where `ns1.devops-monk.com` lives.
 
@@ -565,7 +632,7 @@ This tells the internet where `ns1.devops-monk.com` lives.
 
 Click **Add**.
 
-### Step 4: Add the NS delegation record
+### Step 5: Add the NS delegation record
 
 This tells the internet that your VPS handles all DNS for `*.dyn.devops-monk.com`.
 
@@ -578,7 +645,7 @@ This tells the internet that your VPS handles all DNS for `*.dyn.devops-monk.com
 
 Click **Add**.
 
-### Step 5: Add A records for the web dashboard and API
+### Step 6: Add A records for the web dashboard and API
 
 | Field | Value |
 |-------|-------|
@@ -594,7 +661,7 @@ Click **Add**.
 | Answer | **YOUR_HOSTINGER_VPS_IP** |
 | TTL | **300** |
 
-### Step 6: Wait for DNS propagation
+### Step 7: Wait for DNS propagation
 
 DNS changes can take up to 48 hours to propagate, but usually it's 5-30 minutes.
 
@@ -607,7 +674,7 @@ dig dyn.devops-monk.com NS
 # Should return your VPS IP and ns1.devops-monk.com respectively
 ```
 
-### Step 7: Verify the full chain
+### Step 8: Verify the full chain
 
 ```bash
 # Test PowerDNS directly
@@ -618,18 +685,22 @@ curl https://api.devops-monk.com/health
 
 # Test the dashboard
 curl -I https://ddns.devops-monk.com
+
+# Verify gift site is STILL working
+curl -I https://gift.devops-monk.com
 ```
 
 ### Porkbun DNS summary — what it should look like
 
-After completing the steps, your Porkbun DNS should have these records (in addition to any existing ones):
+After completing the steps, your Porkbun DNS should have these records:
 
-| Type | Host | Answer |
-|------|------|--------|
-| A | `ns1` | `YOUR_VPS_IP` |
-| NS | `dyn` | `ns1.devops-monk.com` |
-| A | `ddns` | `YOUR_VPS_IP` |
-| A | `api` | `YOUR_VPS_IP` |
+| Type | Host | Answer | Status |
+|------|------|--------|--------|
+| A | `gift` | `YOUR_VPS_IP` | **EXISTING — do not touch** |
+| A | `ns1` | `YOUR_VPS_IP` | NEW |
+| NS | `dyn` | `ns1.devops-monk.com` | NEW |
+| A | `ddns` | `YOUR_VPS_IP` | NEW |
+| A | `api` | `YOUR_VPS_IP` | NEW |
 
 ---
 
@@ -676,6 +747,24 @@ https://api.devops-monk.com/update?domain=SUBDOMAIN&token=TOKEN
 
 ## Troubleshooting
 
+### Gift site stopped working after DDNS setup
+
+```bash
+# Check Nginx configs for errors
+nginx -t
+
+# If there's an error in the DDNS config, disable it temporarily
+rm /etc/nginx/sites-enabled/ddns
+systemctl reload nginx
+# Gift site should be back. Fix the DDNS config and re-enable.
+
+# Check PM2 — both processes should be online
+pm2 status
+
+# Check if port 3000 is still used by gift site
+ss -tlnp | grep 3000
+```
+
 ### PowerDNS won't start
 
 ```bash
@@ -689,20 +778,21 @@ echo "nameserver 8.8.8.8" > /etc/resolv.conf
 systemctl restart pdns
 ```
 
-### Backend API not responding
+### DDNS API not responding
 
 ```bash
 pm2 logs ddns-api        # Check for errors
 pm2 restart ddns-api     # Restart
+
+# Check it's on port 3001 (not 3000!)
+ss -tlnp | grep 3001
 ```
 
 ### Dashboard shows blank page
 
 ```bash
-# Check if build succeeded
 ls /opt/ddns-platform/dashboard/dist/
-
-# If empty, rebuild
+# If empty, rebuild:
 cd /opt/ddns-platform/dashboard && npm run build
 ```
 
@@ -712,8 +802,8 @@ cd /opt/ddns-platform/dashboard && npm run build
 # 1. Check PowerDNS directly
 dig @YOUR_VPS_IP dyn.devops-monk.com SOA
 
-# 2. If that works but public DNS doesn't, NS delegation hasn't propagated yet
-# Check at: https://www.whatsmydns.net (search for dyn.devops-monk.com NS)
+# 2. If that works but public DNS doesn't, NS delegation hasn't propagated
+# Check: https://www.whatsmydns.net (search for dyn.devops-monk.com NS)
 
 # 3. Check firewall
 ufw status    # Port 53 tcp/udp should be ALLOW
@@ -722,21 +812,48 @@ ufw status    # Port 53 tcp/udp should be ALLOW
 ### HTTPS certificate not working
 
 ```bash
-# Check Caddy logs
-journalctl -u caddy -n 50
+# Check Nginx logs
+tail -50 /var/log/nginx/error.log
 
-# Make sure DNS A records for ddns.devops-monk.com and api.devops-monk.com
-# point to your VPS IP (check in Porkbun)
+# Re-run certbot
+certbot --nginx -d ddns.devops-monk.com -d api.devops-monk.com
 
-# Restart Caddy
-systemctl restart caddy
+# Test renewal
+certbot renew --dry-run
 ```
 
 ### "KO - invalid token" when updating
 
-- Make sure you're using the correct token (copy from dashboard)
-- Check that the domain exists: go to `https://ddns.devops-monk.com/dashboard`
-- If you regenerated the token, update your cron/script/desktop app with the new one
+- Copy the correct token from `https://ddns.devops-monk.com/dashboard`
+- If you regenerated the token, update your cron/script/desktop app
+
+### Rollback — completely remove DDNS without affecting gift site
+
+```bash
+# 1. Stop DDNS backend
+pm2 stop ddns-api
+pm2 delete ddns-api
+pm2 save
+
+# 2. Remove Nginx config
+rm /etc/nginx/sites-enabled/ddns
+rm /etc/nginx/sites-available/ddns
+systemctl reload nginx
+
+# 3. Stop PowerDNS
+systemctl stop pdns
+systemctl disable pdns
+
+# 4. Remove databases (optional)
+sudo -u postgres dropdb ddns
+sudo -u postgres dropuser ddnsuser
+mysql -u root -e "DROP DATABASE powerdns; DROP USER 'pdns'@'localhost';"
+
+# 5. Remove files
+rm -rf /opt/ddns-platform
+
+# Gift site is completely unaffected
+```
 
 ### Updating to a new version
 
@@ -745,7 +862,7 @@ cd /opt/ddns-platform
 git pull
 cd server && npm run build && cd ..
 cd dashboard && npm run build && cd ..
-npm run migrate          # Apply any new migrations
+npm run migrate
 pm2 restart ddns-api
 ```
 
