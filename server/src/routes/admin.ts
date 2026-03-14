@@ -103,6 +103,40 @@ router.get('/activity', async (_req: Request, res: Response) => {
   res.json(result.rows);
 });
 
+// Get rate limit settings
+router.get('/settings', async (_req: Request, res: Response) => {
+  const result = await pool.query("SELECT key, value FROM settings WHERE key IN ('rate_limit_per_token', 'rate_limit_per_account', 'rate_limit_window_seconds')");
+  const settings: Record<string, string> = {};
+  for (const row of result.rows) {
+    settings[row.key] = row.value;
+  }
+  res.json({
+    rateLimitPerToken: Number(settings.rate_limit_per_token) || 6,
+    rateLimitPerAccount: Number(settings.rate_limit_per_account) || 15,
+    rateLimitWindowSeconds: Number(settings.rate_limit_window_seconds) || 60,
+  });
+});
+
+// Update rate limit settings
+router.post('/settings', async (req: Request, res: Response) => {
+  const { rateLimitPerToken, rateLimitPerAccount, rateLimitWindowSeconds } = req.body;
+
+  if (rateLimitPerToken !== undefined) {
+    const val = Math.max(1, Math.min(1000, Number(rateLimitPerToken)));
+    await pool.query("INSERT INTO settings (key, value) VALUES ('rate_limit_per_token', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [String(val)]);
+  }
+  if (rateLimitPerAccount !== undefined) {
+    const val = Math.max(1, Math.min(5000, Number(rateLimitPerAccount)));
+    await pool.query("INSERT INTO settings (key, value) VALUES ('rate_limit_per_account', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [String(val)]);
+  }
+  if (rateLimitWindowSeconds !== undefined) {
+    const val = Math.max(10, Math.min(3600, Number(rateLimitWindowSeconds)));
+    await pool.query("INSERT INTO settings (key, value) VALUES ('rate_limit_window_seconds', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [String(val)]);
+  }
+
+  res.json({ ok: true });
+});
+
 // Check if current user is admin
 router.get('/check', (_req: Request, res: Response) => {
   res.json({ admin: true });

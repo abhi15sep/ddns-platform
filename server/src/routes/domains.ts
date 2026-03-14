@@ -31,8 +31,8 @@ router.post('/', async (req: Request, res: Response) => {
     'SELECT COUNT(*) FROM domains WHERE user_id=$1',
     [userId]
   );
-  if (Number(countResult.rows[0].count) >= 3) {
-    res.status(403).json({ error: 'Domain limit reached (max 3 per account)' });
+  if (Number(countResult.rows[0].count) >= 5) {
+    res.status(403).json({ error: 'Domain limit reached (max 5 per account)' });
     return;
   }
 

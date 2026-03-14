@@ -51,5 +51,11 @@ export const getAdminUsers = (search?: string) =>
 export const getAdminActivity = () => api.get('/api/admin/activity');
 export const blockUser = (userId: string) => api.post(`/api/admin/users/${userId}/block`);
 export const unblockUser = (userId: string) => api.post(`/api/admin/users/${userId}/unblock`);
+export const getAdminSettings = () => api.get('/api/admin/settings');
+export const updateAdminSettings = (settings: {
+  rateLimitPerToken?: number;
+  rateLimitPerAccount?: number;
+  rateLimitWindowSeconds?: number;
+}) => api.post('/api/admin/settings', settings);
 
 export default api;

@@ -8,6 +8,8 @@ import {
   getAdminActivity,
   blockUser,
   unblockUser,
+  getAdminSettings,
+  updateAdminSettings,
 } from '../api/client';
 
 interface AdminStats {
@@ -43,7 +45,7 @@ interface Toast {
   type: 'success' | 'error';
 }
 
-type TabName = 'users' | 'activity';
+type TabName = 'users' | 'activity' | 'settings';
 let toastId = 0;
 
 export default function AdminPage() {
@@ -57,6 +59,10 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabName>('users');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [rateLimitPerToken, setRateLimitPerToken] = useState(6);
+  const [rateLimitPerAccount, setRateLimitPerAccount] = useState(15);
+  const [rateLimitWindow, setRateLimitWindow] = useState(60);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const addToast = useCallback((message: string, type: 'success' | 'error') => {
     const id = ++toastId;
@@ -74,7 +80,27 @@ export default function AdminPage() {
       getAdminStats().then((r) => setStats(r.data)),
       getAdminUsers().then((r) => setUsers(r.data)),
       getAdminActivity().then((r) => setActivity(r.data)),
+      getAdminSettings().then((r) => {
+        setRateLimitPerToken(r.data.rateLimitPerToken);
+        setRateLimitPerAccount(r.data.rateLimitPerAccount);
+        setRateLimitWindow(r.data.rateLimitWindowSeconds);
+      }).catch(() => {}),
     ]);
+  }
+
+  async function handleSaveSettings() {
+    setSavingSettings(true);
+    try {
+      await updateAdminSettings({
+        rateLimitPerToken: rateLimitPerToken,
+        rateLimitPerAccount: rateLimitPerAccount,
+        rateLimitWindowSeconds: rateLimitWindow,
+      });
+      addToast('Rate limit settings saved', 'success');
+    } catch {
+      addToast('Failed to save settings', 'error');
+    }
+    setSavingSettings(false);
   }
 
   useEffect(() => {
@@ -235,6 +261,9 @@ export default function AdminPage() {
               </button>
               <button className={`tab ${activeTab === 'activity' ? 'tab-active' : ''}`} onClick={() => setActiveTab('activity')}>
                 Activity Monitor
+              </button>
+              <button className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => setActiveTab('settings')}>
+                Rate Limits
               </button>
             </div>
 
@@ -428,6 +457,126 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </>
+            )}
+
+            {/* Settings Tab */}
+            {activeTab === 'settings' && (
+              <div style={{ maxWidth: '520px' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                  Control how many update requests are allowed before rate limiting kicks in. Changes take effect within 30 seconds.
+                </p>
+
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '1.25rem', marginBottom: '1rem' }}>
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+                      Requests per domain (per window)
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={rateLimitPerToken}
+                        onChange={(e) => setRateLimitPerToken(Number(e.target.value))}
+                        style={{
+                          width: '100px',
+                          padding: '0.55rem 0.75rem',
+                          border: '1px solid var(--border-input)',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          background: 'var(--bg-input)',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        requests per domain per {rateLimitWindow}s window
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      Limits each individual subdomain token. E.g. "myhome" can only update {rateLimitPerToken} times.
+                    </p>
+                  </div>
+
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+                      Requests per account (per window)
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="number"
+                        min={1}
+                        max={5000}
+                        value={rateLimitPerAccount}
+                        onChange={(e) => setRateLimitPerAccount(Number(e.target.value))}
+                        style={{
+                          width: '100px',
+                          padding: '0.55rem 0.75rem',
+                          border: '1px solid var(--border-input)',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          background: 'var(--bg-input)',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        total requests across all domains per {rateLimitWindow}s
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      Limits the total updates from one user across all their domains combined.
+                    </p>
+                  </div>
+
+                  <div style={{ marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+                      Time window (seconds)
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="number"
+                        min={10}
+                        max={3600}
+                        value={rateLimitWindow}
+                        onChange={(e) => setRateLimitWindow(Number(e.target.value))}
+                        style={{
+                          width: '100px',
+                          padding: '0.55rem 0.75rem',
+                          border: '1px solid var(--border-input)',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          background: 'var(--bg-input)',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        seconds ({rateLimitWindow >= 60 ? `${Math.floor(rateLimitWindow / 60)}m ${rateLimitWindow % 60 ? rateLimitWindow % 60 + 's' : ''}` : `${rateLimitWindow}s`})
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      Rolling window in which the limits above are counted.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveSettings}
+                  className="btn btn-primary"
+                  disabled={savingSettings}
+                  style={{ width: '100%' }}
+                >
+                  {savingSettings ? 'Saving...' : 'Save Rate Limits'}
+                </button>
+
+                <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--hint-bg)', border: '1px solid var(--hint-border)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--hint-text)', lineHeight: 1.6 }}>
+                  <strong style={{ color: 'var(--hint-strong)' }}>How it works:</strong> When a user exceeds the per-domain limit, that specific domain gets blocked. When they exceed the per-account limit, all their domains get blocked. Blocked requests receive a 429 status. Limits are checked against the update_log in the database.
+                </div>
+              </div>
             )}
           </>
         )}
