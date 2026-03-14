@@ -176,6 +176,9 @@ export default function DownloadsPage() {
                 Dashboard
               </Link>
             )}
+            <Link to="/how-it-works" className="navbar-link">
+              How It Works
+            </Link>
             <Link to="/downloads" className="navbar-link active">
               Downloads
             </Link>

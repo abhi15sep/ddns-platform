@@ -133,9 +133,12 @@ export default function DomainList() {
             <Link to="/dashboard" className="navbar-link active">
               Dashboard
             </Link>
-            <a href="/downloads" className="navbar-link">
+            <Link to="/how-it-works" className="navbar-link">
+              How It Works
+            </Link>
+            <Link to="/downloads" className="navbar-link">
               Downloads
-            </a>
+            </Link>
           </div>
           <div className="navbar-right">
             <span className="navbar-email">{user?.email}</span>

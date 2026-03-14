@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DownloadsPage from './pages/DownloadsPage';
+import HowItWorksPage from './pages/HowItWorksPage';
 import DomainList from './pages/DomainList';
 import DomainDetail from './pages/DomainDetail';
 
@@ -49,6 +50,7 @@ export default function App() {
         }
       />
       <Route path="/downloads" element={<DownloadsPage />} />
+      <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route
         path="/dashboard"
         element={
