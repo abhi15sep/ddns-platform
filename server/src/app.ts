@@ -7,7 +7,7 @@ import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
 import updateRouter from './routes/update.js';
 import domainsRouter from './routes/domains.js';
-iimport adminRouter from './routes/admin.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
 
