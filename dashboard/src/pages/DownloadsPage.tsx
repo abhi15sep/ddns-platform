@@ -111,32 +111,36 @@ export default function DownloadsPage() {
 
   const platforms = [
     {
-      icon: '🪟',
-      title: 'Download for Windows',
-      file: 'ddns-client-setup.exe',
-      req: 'Windows 10+',
-      badge: '.exe',
-    },
-    {
       icon: '🍎',
       title: 'Download for macOS',
-      file: 'ddns-client.dmg',
-      req: 'macOS 10.13+',
+      file: 'DDNS Client-1.0.0-arm64.dmg',
+      href: '/downloads/DDNS Client-1.0.0-arm64.dmg',
+      req: 'macOS 10.13+ (Apple Silicon)',
       badge: '.dmg',
     },
     {
       icon: '🐧',
       title: 'Download for Debian/Ubuntu',
-      file: 'ddns-client.deb',
+      file: 'ddns-client_1.0.0_arm64.deb',
+      href: '/downloads/ddns-client_1.0.0_arm64.deb',
       req: 'Ubuntu 16.04+',
       badge: '.deb',
     },
     {
       icon: '📦',
       title: 'Universal Linux',
-      file: 'ddns-client.AppImage',
+      file: 'DDNS Client-1.0.0-arm64.AppImage',
+      href: '/downloads/DDNS Client-1.0.0-arm64.AppImage',
       req: 'Works on any distro',
       badge: '.AppImage',
+    },
+    {
+      icon: '🪟',
+      title: 'Windows (Coming Soon)',
+      file: 'ddns-client-setup.exe',
+      href: '#',
+      req: 'Windows 10+ — build pending',
+      badge: '.exe',
     },
   ];
 
@@ -173,7 +177,7 @@ export default function DownloadsPage() {
         <h2 className="dl-section-title">Choose Your Platform</h2>
         <div className="dl-platform-grid">
           {platforms.map((p) => (
-            <a href="#" key={p.badge} className="dl-platform-card">
+            <a href={p.href} key={p.badge} className="dl-platform-card" download>
               <span className="dl-platform-icon">{p.icon}</span>
               <span className="dl-platform-badge">{p.badge}</span>
               <strong className="dl-platform-title">{p.title}</strong>
@@ -184,8 +188,9 @@ export default function DownloadsPage() {
           ))}
         </div>
         <p className="dl-note">
-          All downloads are from our GitLab releases page. Binaries are built from the{' '}
-          <a href="#">open source code</a>. Release binaries will be available soon.
+          All binaries are built from{' '}
+          <a href="https://github.com/devops-monk/ddns" target="_blank" rel="noreferrer">open source code</a>.
+          Windows build coming soon. Version 1.0.0.
         </p>
       </section>
 
