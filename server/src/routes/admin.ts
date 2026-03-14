@@ -114,7 +114,7 @@ router.get('/settings', async (_req: Request, res: Response) => {
     rateLimitPerToken: Number(settings.rate_limit_per_token) || 6,
     rateLimitPerAccount: Number(settings.rate_limit_per_account) || 15,
     rateLimitWindowSeconds: Number(settings.rate_limit_window_seconds) || 60,
-    globalApiRateLimit: Number(settings.global_api_rate_limit) || 20,
+    globalApiRateLimit: Number(settings.global_api_rate_limit) || 120,
   });
 });
 

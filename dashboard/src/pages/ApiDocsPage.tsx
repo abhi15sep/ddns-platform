@@ -470,7 +470,7 @@ export default function ApiDocsPage() {
           <div className="info-card">
             <h3>Rate Limits</h3>
             <div className="info-value" style={{ fontSize: '0.85rem', fontWeight: 400 }}>
-              20 req/min global, 6 updates/min per domain
+              120 req/min global, 6 updates/min per domain
             </div>
           </div>
           <div className="info-card">
@@ -642,7 +642,7 @@ export default function ApiDocsPage() {
               <tbody>
                 <tr>
                   <td><strong>Global (per IP)</strong></td>
-                  <td>20 requests / 60s</td>
+                  <td>120 requests / 60s</td>
                   <td>Applies to all endpoints across the entire API per IP address</td>
                 </tr>
                 <tr>
