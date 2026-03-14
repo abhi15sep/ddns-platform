@@ -6,14 +6,15 @@ import {
   regenerateToken,
 } from '../api/client';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
 } from 'recharts';
+import { useThemeContext } from '../App';
 
 interface Domain {
   id: string;
@@ -68,6 +69,7 @@ let toastIdCounter = 0;
 
 export default function DomainDetail() {
   const { subdomain } = useParams<{ subdomain: string }>();
+  const { theme } = useThemeContext();
   const [domain, setDomain] = useState<Domain | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showToken, setShowToken] = useState(false);
@@ -127,16 +129,14 @@ export default function DomainDetail() {
   const uniqueIPs = [...new Set(history.map((h) => h.ip))];
   const chartData = history.map((h) => ({
     ...h,
-    ipIndex: uniqueIPs.indexOf(h.ip),
+    ipIndex: uniqueIPs.indexOf(h.ip) + 1,
     label: h.ip,
     time: new Date(h.updated_at).toLocaleString(),
   }));
 
-  const historyDateRange =
+  const timeRange =
     history.length > 0
-      ? `${new Date(history[0].updated_at).toLocaleDateString()} - ${new Date(
-          history[history.length - 1].updated_at
-        ).toLocaleDateString()}`
+      ? `Last hour · ${history.length} update${history.length !== 1 ? 's' : ''}`
       : '';
 
   return (
@@ -315,39 +315,65 @@ export default function DomainDetail() {
                 <div className="chart-section">
                   <div className="chart-header">
                     <h3>IP Changes Over Time</h3>
-                    {historyDateRange && <span>{historyDateRange}</span>}
+                    {timeRange && <span>{timeRange}</span>}
                   </div>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <ResponsiveContainer width="100%" height={280}>
+                    <AreaChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 12 }}>
+                      <defs>
+                        <linearGradient id="ipGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={theme === 'dark' ? '#6366f1' : '#4f46e5'} stopOpacity={0.25} />
+                          <stop offset="95%" stopColor={theme === 'dark' ? '#6366f1' : '#4f46e5'} stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={theme === 'dark' ? '#2a3352' : '#e5e7eb'}
+                        vertical={false}
+                      />
                       <XAxis
                         dataKey="updated_at"
-                        tickFormatter={(v: string) => new Date(v).toLocaleDateString()}
-                        stroke="#94a3b8"
-                        fontSize={12}
+                        tickFormatter={(v: string) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        stroke={theme === 'dark' ? '#6b7280' : '#9ca3af'}
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
                       />
-                      <YAxis hide />
+                      <YAxis hide domain={[0, 'dataMax + 1']} />
                       <Tooltip
-                        labelFormatter={(v) => new Date(v as string).toLocaleString()}
-                        formatter={(value: number) => [uniqueIPs[value], 'IP']}
+                        labelFormatter={(v) => new Date(v as string).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        formatter={(value: number) => [uniqueIPs[value - 1], 'IP Address']}
                         contentStyle={{
-                          background: '#1e293b',
-                          border: 'none',
+                          background: theme === 'dark' ? '#161b2e' : '#ffffff',
+                          border: `1px solid ${theme === 'dark' ? '#2a3352' : '#e5e7eb'}`,
                           borderRadius: '8px',
-                          color: '#e2e8f0',
+                          color: theme === 'dark' ? '#e8eaed' : '#111827',
                           fontSize: '0.8rem',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                         }}
-                        labelStyle={{ color: '#94a3b8' }}
+                        labelStyle={{ color: theme === 'dark' ? '#9ca3af' : '#6b7280', marginBottom: '4px' }}
                       />
-                      <Line
+                      <Area
                         type="stepAfter"
                         dataKey="ipIndex"
-                        dot={{ fill: '#4f46e5', r: 3 }}
-                        stroke="#4f46e5"
+                        stroke={theme === 'dark' ? '#818cf8' : '#4f46e5'}
                         strokeWidth={2}
+                        fill="url(#ipGradient)"
+                        dot={{ fill: theme === 'dark' ? '#818cf8' : '#4f46e5', r: 3, strokeWidth: 0 }}
+                        activeDot={{ r: 5, fill: theme === 'dark' ? '#a5b4fc' : '#4f46e5', stroke: '#fff', strokeWidth: 2 }}
                       />
-                    </LineChart>
+                    </AreaChart>
                   </ResponsiveContainer>
+                  {uniqueIPs.length > 1 && (
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
+                      {uniqueIPs.map((ip, i) => (
+                        <span key={ip} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === uniqueIPs.length - 1 ? 'var(--badge-active-text)' : 'var(--text-muted)', display: 'inline-block' }} />
+                          {ip}
+                          {i === uniqueIPs.length - 1 && <span style={{ color: 'var(--badge-active-text)', fontWeight: 600 }}>(current)</span>}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="section-label">Update Log</div>
@@ -385,9 +411,9 @@ export default function DomainDetail() {
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                 </div>
-                <div className="empty-state-title">No updates yet</div>
+                <div className="empty-state-title">No updates in the last hour</div>
                 <div className="empty-state-desc">
-                  Send your first update using the Update URL tab to see IP history here.
+                  Update logs are kept for 1 hour. Send an update using the Update URL tab to see IP history here.
                 </div>
               </div>
             )}

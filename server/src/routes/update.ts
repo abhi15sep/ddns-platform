@@ -77,6 +77,12 @@ router.get('/', limiter, async (req: Request, res: Response) => {
       ]
     );
 
+    // Prune logs older than 1 hour for this domain
+    await pool.query(
+      "DELETE FROM update_log WHERE domain=$1 AND updated_at < NOW() - INTERVAL '1 hour'",
+      [domain]
+    );
+
     res.send('OK');
   } catch (err) {
     console.error('Update error:', err);

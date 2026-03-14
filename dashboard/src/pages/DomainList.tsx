@@ -169,7 +169,7 @@ export default function DomainList() {
         <div className="stats-bar">
           <div className="stat-card">
             <div className="stat-label">Total Domains</div>
-            <div className="stat-value">{domains.length}</div>
+            <div className="stat-value">{domains.length}<span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}> / 3</span></div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Public IP</div>
@@ -195,32 +195,40 @@ export default function DomainList() {
           <div className="create-card">
             <h2>Add New Domain</h2>
             <p className="create-card-desc">
-              Register a subdomain for dynamic DNS updates.
+              Register a subdomain for dynamic DNS updates.{domains.length >= 3 ? '' : ` (${3 - domains.length} of 3 remaining)`}
             </p>
-            <div className="create-row">
-              <div className="create-input-wrapper">
-                <input
-                  value={newSub}
-                  onChange={(e) =>
-                    setNewSub(
-                      e.target.value
-                        .toLowerCase()
-                        .replace(/[^a-z0-9-]/g, '')
-                    )
-                  }
-                  placeholder="my-home"
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                />
-              </div>
-              <span className="domain-suffix">.dyn.devops-monk.com</span>
-              <button onClick={handleCreate} className="btn btn-primary btn-lg">
-                Create
-              </button>
-            </div>
-            {newSub && (
-              <div className="create-preview">
-                Your domain will be:{' '}
-                <strong>{newSub}.dyn.devops-monk.com</strong>
+            {domains.length < 3 ? (
+              <>
+                <div className="create-row">
+                  <div className="create-input-wrapper">
+                    <input
+                      value={newSub}
+                      onChange={(e) =>
+                        setNewSub(
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9-]/g, '')
+                        )
+                      }
+                      placeholder="my-home"
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                    />
+                  </div>
+                  <span className="domain-suffix">.dyn.devops-monk.com</span>
+                  <button onClick={handleCreate} className="btn btn-primary btn-lg">
+                    Create
+                  </button>
+                </div>
+                {newSub && (
+                  <div className="create-preview">
+                    Your domain will be:{' '}
+                    <strong>{newSub}.dyn.devops-monk.com</strong>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px', fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                You have reached the maximum of 3 domains. Delete an existing domain to create a new one.
               </div>
             )}
             {error && <div className="error-message" style={{ marginTop: '0.75rem' }}>{error}</div>}

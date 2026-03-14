@@ -16,7 +16,7 @@ router.get('/', async (req: Request, res: Response) => {
   res.json(result.rows);
 });
 
-// Create a new subdomain
+// Create a new subdomain (max 3 per user)
 router.post('/', async (req: Request, res: Response) => {
   const { subdomain } = req.body;
   if (!subdomain || !/^[a-z0-9-]{3,63}$/.test(subdomain)) {
@@ -24,11 +24,23 @@ router.post('/', async (req: Request, res: Response) => {
     return;
   }
 
+  const userId = (req.user as AuthUser).sub;
+
+  // Enforce 3-domain limit per user
+  const countResult = await pool.query(
+    'SELECT COUNT(*) FROM domains WHERE user_id=$1',
+    [userId]
+  );
+  if (Number(countResult.rows[0].count) >= 3) {
+    res.status(403).json({ error: 'Domain limit reached (max 3 per account)' });
+    return;
+  }
+
   try {
     const result = await pool.query(
       `INSERT INTO domains (user_id, subdomain, token)
        VALUES ($1, $2, $3) RETURNING *`,
-      [(req.user as AuthUser).sub, subdomain, uuidv4()]
+      [userId, subdomain, uuidv4()]
     );
     res.json(result.rows[0]);
   } catch (err: any) {
@@ -72,13 +84,13 @@ router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) 
   res.json(result.rows[0]);
 });
 
-// Get update history
+// Get update history (last 1 hour)
 router.get('/:subdomain/history', async (req: Request, res: Response) => {
-  const { limit = '100', offset = '0' } = req.query;
   const result = await pool.query(
     `SELECT ip, source_ip, user_agent, updated_at FROM update_log
-     WHERE domain=$1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3`,
-    [req.params.subdomain, Math.min(Number(limit), 500), Number(offset)]
+     WHERE domain=$1 AND updated_at >= NOW() - INTERVAL '1 hour'
+     ORDER BY updated_at DESC LIMIT 200`,
+    [req.params.subdomain]
   );
   res.json(result.rows);
 });
