@@ -343,8 +343,139 @@ Create comprehensive README at `client-app/README.md` (see separate file).
 - `dashboard/src/pages/LoginPage.tsx` — 2FA challenge screen with 6-digit code input and backup code support
 - `dashboard/src/pages/ProfilePage.tsx` — 2FA section: enable with QR code, verify, view backup codes, disable with password
 
-### All Items Complete
-All 18 planned improvements have been implemented and deployed.
+### Recent Additions (Post Phase 4)
+
+**Global API Rate Limiting + API Token Auth:**
+- `server/src/app.ts` — Global rate limiter (20 req/min per IP, admin-configurable, 30s cache from DB)
+- `server/src/middleware/requireAuth.ts` — Added `Authorization: Bearer <api_token>` support alongside session cookies
+- `server/src/routes/admin.ts` — Admin settings now include `global_api_rate_limit`
+- `dashboard/src/pages/AdminPage.tsx` — Global API Rate Limit card in Settings tab
+- `dashboard/src/pages/ApiDocsPage.tsx` — Updated with 3 auth methods, API token examples, global rate limit docs
+- `db/migrations/010_add_api_token_to_users.sql` — Personal API token column
+
+### All Phase 1–4 Items Complete
+All 18 original planned improvements have been implemented and deployed.
+
+---
+
+## Phase 5: Next Improvements (Priority: HIGH → LOW)
+
+### 5.1 Email Notifications on IP Change (HIGH) — DONE
+SMTP is already configured (Gmail). Added email as a notification channel alongside webhooks.
+- `db/migrations/011_add_notify_email_to_domains.sql` — `notify_email` boolean column
+- `server/src/email.ts` — `sendIPChangeEmail()` with HTML template showing old/new IP, timestamp, manage link
+- `server/src/routes/update.ts` — Fires email on IP change when `notify_email` is enabled and SMTP is configured
+- `server/src/routes/domains.ts` — `PUT /:subdomain/notify-email` toggle endpoint
+- `dashboard/src/pages/DomainDetail.tsx` — Toggle switch on Notifications tab with active indicator
+
+### 5.2 Onboarding Wizard (HIGH) — DONE
+Guide new users through setup after registration.
+- `dashboard/src/pages/OnboardingPage.tsx` — 4-step wizard with progress bar
+  - Step 1: Create domain with live preview
+  - Step 2: Copy token and update URL
+  - Step 3: Platform-specific setup scripts (Linux, macOS, Windows, Docker) with copy buttons
+  - Step 4: Completion screen with next steps links
+- `dashboard/src/pages/RegisterPage.tsx` — Redirects to `/onboarding` after registration
+- `dashboard/src/App.tsx` — Added `/onboarding` protected route
+- Skippable at any time, stores `onboarding_complete` in localStorage
+
+### 5.3 Extended IP History + Charts (HIGH) — DONE
+Extended from 3 hours to 30 days with configurable range and export.
+- `server/src/routes/update.ts` — Retention extended from 3h to 30 days
+- `server/src/routes/domains.ts` — History endpoint accepts `range` param (3h/24h/7d/30d) with per-range limits (500-2000)
+- `dashboard/src/pages/DomainDetail.tsx` — Date range picker tabs, CSV export button, adaptive chart XAxis (time vs date), dynamic empty state
+- `dashboard/src/api/client.ts` — `getDomainHistory` accepts range parameter
+
+### 5.4 Lazy Loading / Code Splitting (HIGH)
+JS bundle is ~800KB. Split it up.
+- `React.lazy()` + `Suspense` for all page routes
+- Separate chunks: landing, auth, dashboard, admin, api-docs
+- Landing page visitors won't download admin/dashboard code
+- Add loading spinner fallback per route
+
+### 5.5 Automated Database Backups (HIGH)
+Protect all user data with automated backups.
+- Cron job: `pg_dump` daily at 3am → compressed `.sql.gz`
+- Keep last 7 daily + 4 weekly backups (rotate old ones)
+- Optional: upload to S3/Cloudflare R2 for offsite backup
+- Alert via email/webhook if backup fails
+
+### 5.6 CI/CD with GitHub Actions (MEDIUM) — DONE
+Automated pipeline replaces manual SSH deploy.
+- `.github/workflows/ci.yml` — Typecheck + build server and dashboard on every push/PR to main
+- `.github/workflows/deploy.yml` — Auto-deploy to VPS via SSH after typecheck passes (push to main only)
+  - Uses `appleboy/ssh-action` with concurrency lock (cancels in-progress deploys)
+  - Runs: `git pull` → `npm ci` → `npm run build` → `vite build` → `pm2 restart`
+- Requires 3 GitHub secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`
+
+### 5.7 Data Export / GDPR Compliance (MEDIUM)
+Let users export all their data from the profile page.
+- Export as JSON: user profile, domains, update history, webhook configs
+- Export as CSV: IP history per domain
+- "Download my data" button on Profile page
+- Useful for compliance and user trust
+
+### 5.8 Session Management (MEDIUM)
+Show and manage active login sessions.
+- Track sessions in DB: device, IP, browser, last active, created_at
+- "Active Sessions" section on Profile page
+- "Logout all other devices" button
+- "Logout" individual sessions
+- Show "Current session" badge
+
+### 5.9 IPv6 Per-Domain Toggle (MEDIUM)
+Let users choose record type per domain.
+- Options: A (IPv4 only), AAAA (IPv6 only), Both
+- Add `record_type` column to domains table (default: 'A')
+- Update `/update` endpoint to create appropriate DNS records
+- Show record type badge on domain cards
+
+### 5.10 Uptime Monitoring (LOW)
+External monitoring for the platform itself.
+- UptimeRobot or similar free service pinging `/health` every 5 min
+- Public status badge on landing page
+- Alert admin via email/Telegram if service goes down
+- Historical uptime percentage display on Status page
+
+### 5.11 PM2 Log Rotation (LOW)
+Prevent disk fill from growing logs.
+- `pm2 install pm2-logrotate`
+- Configure: max 10MB per file, keep 10 rotated files
+- 15-minute setup, prevents future disk issues
+
+### 5.12 Domain Sharing / Teams (LOW)
+Allow collaboration on domains.
+- Invite users by email to manage specific domains
+- Roles: viewer (read-only), editor (can update), admin (full control)
+- `domain_shares` table: domain_id, user_id, role
+- Shared domains appear in collaborator's dashboard with a "Shared" badge
+
+### 5.13 Multi-Language Support (LOW)
+i18n for broader audience.
+- `react-i18next` framework
+- Start with English + Hindi
+- Language selector in navbar
+- Community-contributed translations via JSON files
+
+---
+
+## Phase 5 Implementation Order
+
+| Priority | Task | Effort | Status |
+|----------|------|--------|--------|
+| 19 | Email notifications on IP change | 0.5 day | **DONE** |
+| 20 | Onboarding wizard for new users | 0.5 day | **DONE** |
+| 21 | Extended IP history (30d) + charts + CSV export | 1 day | **DONE** |
+| 22 | Lazy loading / code splitting (React.lazy) | 0.5 day | TODO |
+| 23 | Automated database backups (cron + pg_dump) | 0.5 day | TODO |
+| 24 | CI/CD with GitHub Actions (lint, build, deploy) | 1 day | **DONE** |
+| 25 | Data export / GDPR compliance | 0.5 day | TODO |
+| 26 | Session management (active sessions, logout all) | 1 day | TODO |
+| 27 | IPv6 per-domain toggle (A/AAAA/Both) | 0.5 day | TODO |
+| 28 | Uptime monitoring (external + status badge) | 0.5 day | TODO |
+| 29 | PM2 log rotation | 15 min | TODO |
+| 30 | Domain sharing / teams | 1.5 days | TODO |
+| 31 | Multi-language support (i18n) | 1 day | TODO |
 
 ---
 
