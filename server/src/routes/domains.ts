@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../db.js';
 import { deleteDNSRecord } from '../powerdns.js';
-import { requireAuth } from '../middleware/requireAuth.js';
+import { requireAuth, AuthUser } from '../middleware/requireAuth.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -11,7 +11,7 @@ router.use(requireAuth);
 router.get('/', async (req: Request, res: Response) => {
   const result = await pool.query(
     'SELECT * FROM domains WHERE user_id=$1 ORDER BY created_at DESC',
-    [req.user!.sub]
+    [(req.user as AuthUser).sub]
   );
   res.json(result.rows);
 });
@@ -28,7 +28,7 @@ router.post('/', async (req: Request, res: Response) => {
     const result = await pool.query(
       `INSERT INTO domains (user_id, subdomain, token)
        VALUES ($1, $2, $3) RETURNING *`,
-      [req.user!.sub, subdomain, uuidv4()]
+      [(req.user as AuthUser).sub, subdomain, uuidv4()]
     );
     res.json(result.rows[0]);
   } catch (err: any) {
@@ -45,14 +45,14 @@ router.delete('/:subdomain', async (req: Request, res: Response) => {
   const { subdomain } = req.params;
   const result = await pool.query(
     'DELETE FROM domains WHERE subdomain=$1 AND user_id=$2 RETURNING *',
-    [subdomain, req.user!.sub]
+    [subdomain, (req.user as AuthUser).sub]
   );
   if (!result.rows.length) {
     res.status(404).json({ error: 'Not found' });
     return;
   }
   try {
-    await deleteDNSRecord(subdomain);
+    await deleteDNSRecord(subdomain as string);
   } catch (err) {
     console.error('Failed to delete DNS record:', err);
   }
@@ -63,7 +63,7 @@ router.delete('/:subdomain', async (req: Request, res: Response) => {
 router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) => {
   const result = await pool.query(
     'UPDATE domains SET token=$1 WHERE subdomain=$2 AND user_id=$3 RETURNING *',
-    [uuidv4(), req.params.subdomain, req.user!.sub]
+    [uuidv4(), req.params.subdomain, (req.user as AuthUser).sub]
   );
   if (!result.rows.length) {
     res.status(404).json({ error: 'Not found' });
