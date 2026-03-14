@@ -34,6 +34,9 @@ export const getDomainHistory = (subdomain: string) =>
 export const updateWebhook = (subdomain: string, webhookUrl: string | null) =>
   api.put(`/api/domains/${subdomain}/webhook`, { webhook_url: webhookUrl });
 
+export const updateNotifyEmail = (subdomain: string, enabled: boolean) =>
+  api.put(`/api/domains/${subdomain}/notify-email`, { enabled });
+
 // Profile
 export const getProfile = () => api.get('/auth/profile');
 

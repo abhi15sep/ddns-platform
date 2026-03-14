@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../db.js';
 import { updateDNSRecord } from '../powerdns.js';
+import { sendIPChangeEmail } from '../email.js';
+import { config } from '../config.js';
 
 const router = Router();
 
@@ -149,6 +151,7 @@ router.get('/', async (req: Request, res: Response) => {
     const detectedIP = (ip as string) || detectIP(req);
     const oldIP = result.rows[0].current_ip;
     const webhookUrl = result.rows[0].webhook_url;
+    const notifyEmail = result.rows[0].notify_email;
 
     // Validate IP (v4 or v6)
     const isV4 = IPV4_RE.test(detectedIP);
@@ -169,11 +172,23 @@ router.get('/', async (req: Request, res: Response) => {
       [detectedIP, domain]
     );
 
-    // Fire webhook if IP changed and webhook is configured
-    if (webhookUrl && oldIP && oldIP !== detectedIP) {
-      fireWebhook(webhookUrl, domain as string, oldIP, detectedIP).catch((err) =>
-        console.error(`Webhook failed for ${domain}:`, err)
-      );
+    // Fire notifications if IP changed
+    if (oldIP && oldIP !== detectedIP) {
+      // Webhook notification
+      if (webhookUrl) {
+        fireWebhook(webhookUrl, domain as string, oldIP, detectedIP).catch((err) =>
+          console.error(`Webhook failed for ${domain}:`, err)
+        );
+      }
+      // Email notification
+      if (notifyEmail && config.SMTP_HOST) {
+        const userResult = await pool.query('SELECT email FROM users WHERE id=$1', [userId]);
+        if (userResult.rows.length) {
+          sendIPChangeEmail(userResult.rows[0].email, domain as string, oldIP, detectedIP).catch((err) =>
+            console.error(`Email notification failed for ${domain}:`, err)
+          );
+        }
+      }
     }
 
     // Log the update

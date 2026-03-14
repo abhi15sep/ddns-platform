@@ -5,6 +5,7 @@ import {
   getDomainHistory,
   regenerateToken,
   updateWebhook,
+  updateNotifyEmail,
 } from '../api/client';
 import {
   AreaChart,
@@ -24,6 +25,7 @@ interface Domain {
   updated_at: string | null;
   token: string;
   webhook_url: string | null;
+  notify_email: boolean;
 }
 
 interface HistoryEntry {
@@ -451,6 +453,70 @@ export default function DomainDetail() {
         {/* Notifications Tab */}
         {activeTab === 'notifications' && (
           <section>
+            {/* Email Notification */}
+            <div className="info-card" style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ marginBottom: '0.25rem' }}>Email Notification</h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    Receive an email when this domain's IP address changes.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const r = await updateNotifyEmail(subdomain!, !domain.notify_email);
+                      setDomain(r.data);
+                      addToast(r.data.notify_email ? 'Email notifications enabled' : 'Email notifications disabled', 'success');
+                    } catch {
+                      addToast('Failed to update email notification', 'error');
+                    }
+                  }}
+                  style={{
+                    position: 'relative',
+                    width: '48px',
+                    height: '26px',
+                    borderRadius: '13px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: domain.notify_email ? 'var(--accent-primary, #4f46e5)' : 'var(--border-input, #d1d5db)',
+                    transition: 'background 0.2s',
+                    flexShrink: 0,
+                    padding: 0,
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute',
+                    top: '3px',
+                    left: domain.notify_email ? '24px' : '3px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'white',
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </button>
+              </div>
+              {domain.notify_email && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--badge-active-text)', display: 'inline-block', flexShrink: 0 }} />
+                  Emails will be sent to your account email when IP changes.
+                </div>
+              )}
+            </div>
+
+            {/* Webhook Notification */}
             <div className="info-card">
               <h3 style={{ marginBottom: '0.5rem' }}>Webhook Notification</h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>

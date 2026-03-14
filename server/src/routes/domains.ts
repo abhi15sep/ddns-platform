@@ -100,6 +100,20 @@ router.put('/:subdomain/webhook', async (req: Request, res: Response) => {
   res.json(result.rows[0]);
 });
 
+// Toggle email notification
+router.put('/:subdomain/notify-email', async (req: Request, res: Response) => {
+  const { enabled } = req.body;
+  const result = await pool.query(
+    'UPDATE domains SET notify_email=$1 WHERE subdomain=$2 AND user_id=$3 RETURNING *',
+    [!!enabled, req.params.subdomain, (req.user as AuthUser).sub]
+  );
+  if (!result.rows.length) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  res.json(result.rows[0]);
+});
+
 // Regenerate token
 router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) => {
   const result = await pool.query(
