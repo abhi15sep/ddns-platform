@@ -73,6 +73,7 @@ export const updateAdminSettings = (settings: {
   rateLimitPerToken?: number;
   rateLimitPerAccount?: number;
   rateLimitWindowSeconds?: number;
+  globalApiRateLimit?: number;
 }) => api.post('/api/admin/settings', settings);
 
 export default api;

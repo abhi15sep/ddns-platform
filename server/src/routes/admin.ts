@@ -105,7 +105,7 @@ router.get('/activity', async (_req: Request, res: Response) => {
 
 // Get rate limit settings
 router.get('/settings', async (_req: Request, res: Response) => {
-  const result = await pool.query("SELECT key, value FROM settings WHERE key IN ('rate_limit_per_token', 'rate_limit_per_account', 'rate_limit_window_seconds')");
+  const result = await pool.query("SELECT key, value FROM settings WHERE key IN ('rate_limit_per_token', 'rate_limit_per_account', 'rate_limit_window_seconds', 'global_api_rate_limit')");
   const settings: Record<string, string> = {};
   for (const row of result.rows) {
     settings[row.key] = row.value;
@@ -114,6 +114,7 @@ router.get('/settings', async (_req: Request, res: Response) => {
     rateLimitPerToken: Number(settings.rate_limit_per_token) || 6,
     rateLimitPerAccount: Number(settings.rate_limit_per_account) || 15,
     rateLimitWindowSeconds: Number(settings.rate_limit_window_seconds) || 60,
+    globalApiRateLimit: Number(settings.global_api_rate_limit) || 100,
   });
 });
 
@@ -132,6 +133,10 @@ router.post('/settings', async (req: Request, res: Response) => {
   if (rateLimitWindowSeconds !== undefined) {
     const val = Math.max(10, Math.min(3600, Number(rateLimitWindowSeconds)));
     await pool.query("INSERT INTO settings (key, value) VALUES ('rate_limit_window_seconds', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [String(val)]);
+  }
+  if (req.body.globalApiRateLimit !== undefined) {
+    const val = Math.max(10, Math.min(10000, Number(req.body.globalApiRateLimit)));
+    await pool.query("INSERT INTO settings (key, value) VALUES ('global_api_rate_limit', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [String(val)]);
   }
 
   res.json({ ok: true });

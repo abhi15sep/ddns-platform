@@ -62,6 +62,7 @@ export default function AdminPage() {
   const [rateLimitPerToken, setRateLimitPerToken] = useState(6);
   const [rateLimitPerAccount, setRateLimitPerAccount] = useState(15);
   const [rateLimitWindow, setRateLimitWindow] = useState(60);
+  const [globalApiRateLimit, setGlobalApiRateLimit] = useState(100);
   const [savingSettings, setSavingSettings] = useState(false);
 
   const addToast = useCallback((message: string, type: 'success' | 'error') => {
@@ -84,6 +85,7 @@ export default function AdminPage() {
         setRateLimitPerToken(r.data.rateLimitPerToken);
         setRateLimitPerAccount(r.data.rateLimitPerAccount);
         setRateLimitWindow(r.data.rateLimitWindowSeconds);
+        setGlobalApiRateLimit(r.data.globalApiRateLimit);
       }).catch(() => {}),
     ]);
   }
@@ -95,6 +97,7 @@ export default function AdminPage() {
         rateLimitPerToken: rateLimitPerToken,
         rateLimitPerAccount: rateLimitPerAccount,
         rateLimitWindowSeconds: rateLimitWindow,
+        globalApiRateLimit: globalApiRateLimit,
       });
       addToast('Rate limit settings saved', 'success');
     } catch {
@@ -465,10 +468,48 @@ export default function AdminPage() {
             {activeTab === 'settings' && (
               <div style={{ maxWidth: '520px' }}>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                  Control how many update requests are allowed before rate limiting kicks in. Changes take effect within 30 seconds.
+                  Control rate limiting across your API. Changes take effect within 30 seconds.
                 </p>
 
+                {/* Global API Rate Limit */}
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '1.25rem', marginBottom: '1rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>Global API Rate Limit</h4>
+                  <div style={{ marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+                      Max requests per IP (per minute)
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="number"
+                        min={10}
+                        max={10000}
+                        value={globalApiRateLimit}
+                        onChange={(e) => setGlobalApiRateLimit(Number(e.target.value))}
+                        style={{
+                          width: '100px',
+                          padding: '0.55rem 0.75rem',
+                          border: '1px solid var(--border-input)',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          background: 'var(--bg-input)',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        requests per IP per minute
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      Applies to all API endpoints (auth, domains, admin, update). Protects against brute-force and abuse. The /health endpoint is excluded.
+                    </p>
+                  </div>
+                </div>
+
+                {/* DDNS Update Rate Limits */}
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '1.25rem', marginBottom: '1rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>DDNS Update Rate Limits</h4>
                   <div style={{ marginBottom: '1.25rem' }}>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
                       Requests per domain (per window)
@@ -576,7 +617,10 @@ export default function AdminPage() {
                 </button>
 
                 <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--hint-bg)', border: '1px solid var(--hint-border)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--hint-text)', lineHeight: 1.6 }}>
-                  <strong style={{ color: 'var(--hint-strong)' }}>How it works:</strong> When a user exceeds the per-domain limit, that specific domain gets blocked. When they exceed the per-account limit, all their domains get blocked. Blocked requests receive a 429 status. Limits are checked against the update_log in the database.
+                  <strong style={{ color: 'var(--hint-strong)' }}>How it works:</strong><br />
+                  <strong>Global limit:</strong> Caps total requests from any single IP address across all endpoints. Prevents brute-force attacks and general abuse.<br />
+                  <strong>Update limits:</strong> When a user exceeds the per-domain limit, that specific domain gets blocked. When they exceed the per-account limit, all their domains get blocked.<br />
+                  All blocked requests receive a 429 status.
                 </div>
               </div>
             )}
