@@ -62,7 +62,7 @@ export default function AdminPage() {
   const [rateLimitPerToken, setRateLimitPerToken] = useState(6);
   const [rateLimitPerAccount, setRateLimitPerAccount] = useState(15);
   const [rateLimitWindow, setRateLimitWindow] = useState(60);
-  const [globalApiRateLimit, setGlobalApiRateLimit] = useState(100);
+  const [globalApiRateLimit, setGlobalApiRateLimit] = useState(20);
   const [savingSettings, setSavingSettings] = useState(false);
 
   const addToast = useCallback((message: string, type: 'success' | 'error') => {

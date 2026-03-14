@@ -22,13 +22,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Global API rate limiter — configurable via admin console
-let cachedGlobalLimit = 100; // default: 100 req/min per IP
+let cachedGlobalLimit = 20; // default: 20 req/min per IP
 let limitCacheTime = 0;
 async function getGlobalLimit(): Promise<number> {
   if (Date.now() - limitCacheTime < 30_000) return cachedGlobalLimit;
   try {
     const r = await pool.query("SELECT value FROM settings WHERE key='global_api_rate_limit'");
-    if (r.rows.length) cachedGlobalLimit = Math.max(10, Number(r.rows[0].value) || 100);
+    if (r.rows.length) cachedGlobalLimit = Math.max(10, Number(r.rows[0].value) || 20);
     limitCacheTime = Date.now();
   } catch { /* use cached value */ }
   return cachedGlobalLimit;
