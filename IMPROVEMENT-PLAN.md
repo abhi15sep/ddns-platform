@@ -416,13 +416,16 @@ Let users export all their data and delete their account completely.
 - `DELETE /auth/account` — Complete account deletion: removes DNS records via PowerDNS API, then deletes all DB records (update_log, domains, totp_secrets, oauth_accounts, password_reset_tokens, users)
 - Delete confirmation modal lists all data that will be removed
 
-### 5.8 Session Management (MEDIUM)
+### 5.8 Session Management (MEDIUM) — DONE
 Show and manage active login sessions.
-- Track sessions in DB: device, IP, browser, last active, created_at
-- "Active Sessions" section on Profile page
-- "Logout all other devices" button
-- "Logout" individual sessions
-- Show "Current session" badge
+- `sessions` table tracks: user_id, IP, user_agent, created_at, last_active
+- JWT now embeds `sid` (session ID); `requireAuth` validates session exists and updates `last_active`
+- `GET /auth/sessions` — list all active sessions with `is_current` flag
+- `DELETE /auth/sessions/:id` — revoke a specific session
+- `POST /auth/sessions/logout-others` — revoke all except current
+- Logout deletes session from DB; revoking a session invalidates its JWT
+- Profile page: "Active Sessions" section with browser/OS detection, IP, last active time
+- "Current" badge on active session, "Revoke" button on others, "Logout All Other Devices" button
 
 ### 5.9 IPv6 Per-Domain Toggle (MEDIUM)
 Let users choose record type per domain.

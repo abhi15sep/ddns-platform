@@ -20,9 +20,19 @@ const authLimiter = rateLimit({
   message: { error: 'Too many attempts, try again later' },
 });
 
-function issueJWT(res: Response, user: { id: string; email: string }) {
+async function issueJWT(res: Response, user: { id: string; email: string }, req?: Request) {
+  // Create a session record
+  const ip = req ? (req.headers['x-forwarded-for'] as string || req.ip || 'unknown') : 'unknown';
+  const userAgent = req ? (req.headers['user-agent'] || 'unknown') : 'unknown';
+
+  const sessionResult = await pool.query(
+    'INSERT INTO sessions (user_id, ip, user_agent) VALUES ($1, $2, $3) RETURNING id',
+    [user.id, typeof ip === 'string' ? ip.split(',')[0].trim() : ip, userAgent]
+  );
+  const sessionId = sessionResult.rows[0].id;
+
   const token = jwt.sign(
-    { sub: user.id, email: user.email },
+    { sub: user.id, email: user.email, sid: sessionId },
     config.JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -52,7 +62,7 @@ async function handleOAuthCallback(req: Request, res: Response) {
     res.redirect(`${config.APP_URL}/login?requires_2fa=1&temp_token=${tempToken}`);
     return;
   }
-  issueJWT(res, user);
+  await issueJWT(res, user, req);
   res.redirect(`${config.APP_URL}/dashboard`);
 }
 
@@ -88,7 +98,7 @@ router.post('/login', authLimiter, (req: Request, res: Response, next) => {
       return;
     }
 
-    issueJWT(res, user);
+    await issueJWT(res, user, req);
     res.json({ ok: true, user: { id: user.id, email: user.email } });
   })(req, res, next);
 });
@@ -131,7 +141,7 @@ router.post('/verify-2fa', authLimiter, async (req: Request, res: Response) => {
         res.status(400).json({ error: 'User not found' });
         return;
       }
-      issueJWT(res, userResult.rows[0]);
+      await issueJWT(res, userResult.rows[0], req);
       res.json({ ok: true, user: userResult.rows[0] });
       return;
     }
@@ -147,7 +157,7 @@ router.post('/verify-2fa', authLimiter, async (req: Request, res: Response) => {
         await pool.query('UPDATE totp_secrets SET backup_codes=$1 WHERE user_id=$2', [updated, userId]);
 
         const userResult = await pool.query('SELECT id, email FROM users WHERE id=$1', [userId]);
-        issueJWT(res, userResult.rows[0]);
+        await issueJWT(res, userResult.rows[0], req);
         res.json({ ok: true, user: userResult.rows[0] });
         return;
       }
@@ -173,7 +183,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
       'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
       [email, hash]
     );
-    issueJWT(res, result.rows[0]);
+    await issueJWT(res, result.rows[0], req);
     res.json({ ok: true, user: result.rows[0] });
   } catch (err: any) {
     if (err.code === '23505') {
@@ -185,7 +195,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
 });
 
 // Get current user
-router.get('/me', (req: Request, res: Response) => {
+router.get('/me', async (req: Request, res: Response) => {
   const token = req.cookies?.token;
   if (!token) {
     res.status(401).json({ error: 'Not authenticated' });
@@ -193,6 +203,15 @@ router.get('/me', (req: Request, res: Response) => {
   }
   try {
     const payload = jwt.verify(token, config.JWT_SECRET) as any;
+    // Validate session if sid present
+    if (payload.sid) {
+      const sess = await pool.query('SELECT id FROM sessions WHERE id=$1 AND user_id=$2', [payload.sid, payload.sub]);
+      if (!sess.rows.length) {
+        res.clearCookie('token');
+        res.status(401).json({ error: 'Session has been revoked. Please log in again.' });
+        return;
+      }
+    }
     res.json({ id: payload.sub, email: payload.email });
   } catch {
     res.status(401).json({ error: 'Session expired' });
@@ -200,9 +219,72 @@ router.get('/me', (req: Request, res: Response) => {
 });
 
 // Logout
-router.post('/logout', (_req: Request, res: Response) => {
+router.post('/logout', (req: Request, res: Response) => {
+  // Delete session from DB if present
+  const cookieToken = req.cookies?.token;
+  if (cookieToken) {
+    try {
+      const payload = jwt.verify(cookieToken, config.JWT_SECRET) as any;
+      if (payload.sid) {
+        pool.query('DELETE FROM sessions WHERE id=$1', [payload.sid]).catch(() => {});
+      }
+    } catch { /* expired token — session will be cleaned up later */ }
+  }
   res.clearCookie('token');
   res.json({ ok: true });
+});
+
+// List active sessions
+router.get('/sessions', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const currentSid = (req.user as AuthUser).sid;
+
+  const result = await pool.query(
+    'SELECT id, ip, user_agent, created_at, last_active FROM sessions WHERE user_id=$1 ORDER BY last_active DESC',
+    [userId]
+  );
+
+  res.json(result.rows.map((s: any) => ({
+    ...s,
+    is_current: s.id === currentSid,
+  })));
+});
+
+// Revoke a specific session
+router.delete('/sessions/:id', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const currentSid = (req.user as AuthUser).sid;
+  const sessionId = req.params.id;
+
+  if (sessionId === currentSid) {
+    res.status(400).json({ error: 'Cannot revoke your current session. Use logout instead.' });
+    return;
+  }
+
+  const result = await pool.query(
+    'DELETE FROM sessions WHERE id=$1 AND user_id=$2 RETURNING id',
+    [sessionId, userId]
+  );
+
+  if (!result.rows.length) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+
+  res.json({ ok: true });
+});
+
+// Logout all other sessions
+router.post('/sessions/logout-others', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const currentSid = (req.user as AuthUser).sid;
+
+  const result = await pool.query(
+    'DELETE FROM sessions WHERE user_id=$1 AND id != $2',
+    [userId, currentSid]
+  );
+
+  res.json({ ok: true, revoked: result.rowCount });
 });
 
 // Get profile
@@ -398,6 +480,7 @@ router.delete('/account', requireAuth, async (req: Request, res: Response) => {
     // 2. Delete all user data from our DB
     await pool.query('DELETE FROM update_log WHERE domain IN (SELECT subdomain FROM domains WHERE user_id=$1)', [userId]);
     await pool.query('DELETE FROM domains WHERE user_id=$1', [userId]);
+    await pool.query('DELETE FROM sessions WHERE user_id=$1', [userId]);
     await pool.query('DELETE FROM totp_secrets WHERE user_id=$1', [userId]);
     await pool.query('DELETE FROM oauth_accounts WHERE user_id=$1', [userId]);
     await pool.query('DELETE FROM password_reset_tokens WHERE user_id=$1', [userId]);

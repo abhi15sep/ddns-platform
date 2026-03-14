@@ -9,6 +9,9 @@ import {
   regenerateApiToken,
   deleteAccount,
   exportData,
+  getSessions,
+  revokeSession,
+  logoutOtherSessions,
   checkAdmin,
   get2FAStatus,
   setup2FA,
@@ -27,6 +30,15 @@ interface ProfileData {
   created_at: string;
   has_password: boolean;
   providers: string[]; // e.g. ['google', 'github']
+}
+
+interface Session {
+  id: string;
+  ip: string;
+  user_agent: string;
+  created_at: string;
+  last_active: string;
+  is_current: boolean;
 }
 
 let toastId = 0;
@@ -63,6 +75,11 @@ export default function ProfilePage() {
   const [setupError, setSetupError] = useState('');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [disablePassword, setDisablePassword] = useState('');
+
+  // Sessions
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   // Data export
   const [exportLoading, setExportLoading] = useState<'json' | 'csv' | null>(null);
@@ -107,6 +124,11 @@ export default function ProfilePage() {
       .then((r) => setTwoFAEnabled(r.data.enabled))
       .catch(() => {})
       .finally(() => setTwoFALoading(false));
+
+    getSessions()
+      .then((r) => setSessions(r.data))
+      .catch(() => {})
+      .finally(() => setSessionsLoading(false));
   }, [user]);
 
   async function handleLogout() {
@@ -182,6 +204,62 @@ export default function ProfilePage() {
     } catch {
       addToast('Failed to delete account', 'error');
       setDeleteLoading(false);
+    }
+  }
+
+  function parseBrowser(ua: string): string {
+    if (!ua || ua === 'unknown') return 'Unknown';
+    if (ua.includes('Firefox/')) return 'Firefox';
+    if (ua.includes('Edg/')) return 'Edge';
+    if (ua.includes('Chrome/')) return 'Chrome';
+    if (ua.includes('Safari/')) return 'Safari';
+    if (ua.includes('curl/')) return 'curl';
+    if (ua.includes('python')) return 'Python';
+    return ua.slice(0, 30);
+  }
+
+  function parseOS(ua: string): string {
+    if (!ua || ua === 'unknown') return '';
+    if (ua.includes('Windows')) return 'Windows';
+    if (ua.includes('Mac OS')) return 'macOS';
+    if (ua.includes('Linux')) return 'Linux';
+    if (ua.includes('Android')) return 'Android';
+    if (ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+    return '';
+  }
+
+  function timeAgo(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  async function handleRevokeSession(sessionId: string) {
+    setRevokingId(sessionId);
+    try {
+      await revokeSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      addToast('Session revoked', 'success');
+    } catch {
+      addToast('Failed to revoke session', 'error');
+    } finally {
+      setRevokingId(null);
+    }
+  }
+
+  async function handleLogoutOthers() {
+    if (!confirm('This will log out all other devices. Continue?')) return;
+    try {
+      const r = await logoutOtherSessions();
+      setSessions((prev) => prev.filter((s) => s.is_current));
+      addToast(`Logged out ${r.data.revoked} other session(s)`, 'success');
+    } catch {
+      addToast('Failed to logout other sessions', 'error');
     }
   }
 
@@ -437,6 +515,85 @@ export default function ProfilePage() {
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 No API token available. Your account may not support programmatic access yet.
               </p>
+            )}
+          </div>
+        </section>
+
+        {/* Active Sessions */}
+        <section>
+          <div className="section-label">Active Sessions</div>
+          <div className="info-card">
+            {sessionsLoading ? (
+              <div className="loading" style={{ padding: '1rem' }}>Loading...</div>
+            ) : sessions.length === 0 ? (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No active sessions found.</p>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {sessions.map((s) => (
+                    <div
+                      key={s.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        padding: '0.75rem',
+                        background: s.is_current ? 'var(--accent-bg)' : 'var(--bg-secondary)',
+                        borderRadius: '8px',
+                        border: s.is_current ? '1px solid var(--accent)' : '1px solid var(--border-light)',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-heading)' }}>
+                            {parseBrowser(s.user_agent)}
+                          </span>
+                          {parseOS(s.user_agent) && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              on {parseOS(s.user_agent)}
+                            </span>
+                          )}
+                          {s.is_current && (
+                            <span style={{
+                              fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem',
+                              borderRadius: '4px', background: 'var(--badge-active-bg)', color: 'var(--badge-active-text)',
+                              textTransform: 'uppercase', letterSpacing: '0.03em',
+                            }}>
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          <span>IP: {s.ip}</span>
+                          <span>Active: {timeAgo(s.last_active)}</span>
+                          <span>Created: {formatDate(s.created_at)}</span>
+                        </div>
+                      </div>
+                      {!s.is_current && (
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleRevokeSession(s.id)}
+                          disabled={revokingId === s.id}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {revokingId === s.id ? 'Revoking...' : 'Revoke'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {sessions.filter((s) => !s.is_current).length > 0 && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleLogoutOthers}
+                    style={{ marginTop: '0.75rem' }}
+                  >
+                    Logout All Other Devices
+                  </button>
+                )}
+              </>
             )}
           </div>
         </section>

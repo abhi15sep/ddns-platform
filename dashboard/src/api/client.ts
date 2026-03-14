@@ -58,6 +58,11 @@ export const forgotPassword = (email: string) =>
 export const resetPassword = (token: string, password: string) =>
   api.post('/auth/reset-password', { token, password });
 
+// Sessions
+export const getSessions = () => api.get('/auth/sessions');
+export const revokeSession = (sessionId: string) => api.delete(`/auth/sessions/${sessionId}`);
+export const logoutOtherSessions = () => api.post('/auth/sessions/logout-others');
+
 // 2FA
 export const get2FAStatus = () => api.get('/auth/2fa/status');
 export const setup2FA = () => api.post('/auth/2fa/setup');
