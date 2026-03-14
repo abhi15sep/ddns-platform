@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { checkAdmin } from '../api/client';
 import { ThemeToggleButton } from '../App';
 
 type TabKey = 'linux' | 'windows' | 'docker' | 'synology' | 'router' | 'rpi';
@@ -110,8 +111,13 @@ function CopyBlock({ code }: { code: string }) {
 
 export default function DownloadsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('linux');
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) checkAdmin().then(() => setIsAdmin(true)).catch(() => {});
+  }, [user]);
 
   async function handleLogout() {
     await logout();
@@ -209,6 +215,11 @@ export default function DownloadsPage() {
             <Link to="/downloads" className="navbar-link active">
               Downloads
             </Link>
+            {isAdmin && (
+              <Link to="/admin" className="navbar-link">
+                Admin
+              </Link>
+            )}
           </div>
           <div className="navbar-right">
             <ThemeToggleButton />

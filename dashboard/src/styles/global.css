@@ -1456,6 +1456,22 @@ section {
   }
 }
 
+/* ===== How It Works SVG Diagrams (dark mode adaptation) ===== */
+.hiw-svg-diagram svg {
+  transition: filter 0.2s;
+}
+[data-theme="dark"] .hiw-svg-diagram svg {
+  filter: invert(0.88) hue-rotate(180deg);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .hiw-svg-diagram svg {
+    filter: invert(0.88) hue-rotate(180deg);
+  }
+}
+[data-theme="light"] .hiw-svg-diagram svg {
+  filter: none;
+}
+
 /* ===== Downloads Page ===== */
 
 .dl-page {

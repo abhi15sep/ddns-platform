@@ -8,6 +8,7 @@ import {
   getApiToken,
   regenerateApiToken,
   deleteAccount,
+  checkAdmin,
 } from '../api/client';
 
 interface Toast {
@@ -45,6 +46,9 @@ export default function ProfilePage() {
   const [tokenLoading, setTokenLoading] = useState(true);
   const [tokenRevealed, setTokenRevealed] = useState(false);
 
+  // Admin
+  const [isAdmin, setIsAdmin] = useState(false);
+
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -78,6 +82,8 @@ export default function ProfilePage() {
       .then((r) => setApiToken(r.data.token))
       .catch(() => setApiToken(null))
       .finally(() => setTokenLoading(false));
+
+    checkAdmin().then(() => setIsAdmin(true)).catch(() => {});
   }, [user]);
 
   async function handleLogout() {
@@ -190,6 +196,11 @@ export default function ProfilePage() {
             <Link to="/downloads" className="navbar-link">
               Downloads
             </Link>
+            {isAdmin && (
+              <Link to="/admin" className="navbar-link">
+                Admin
+              </Link>
+            )}
           </div>
           <div className="navbar-right">
             <ThemeToggleButton />

@@ -1,10 +1,17 @@
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { checkAdmin } from '../api/client';
 import { ThemeToggleButton } from '../App';
 
 export default function HowItWorksPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) checkAdmin().then(() => setIsAdmin(true)).catch(() => {});
+  }, [user]);
 
   async function handleLogout() {
     await logout();
@@ -32,6 +39,11 @@ export default function HowItWorksPage() {
             <Link to="/downloads" className="navbar-link">
               Downloads
             </Link>
+            {isAdmin && (
+              <Link to="/admin" className="navbar-link">
+                Admin
+              </Link>
+            )}
           </div>
           <div className="navbar-right">
             <ThemeToggleButton />
@@ -72,7 +84,7 @@ export default function HowItWorksPage() {
           </p>
 
           {/* Problem SVG */}
-          <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflowX: 'auto' }}>
+          <div className="hiw-svg-diagram" style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 1px 3px var(--shadow-sm)', border: '1px solid var(--border-light)', overflowX: 'auto' }}>
             <svg viewBox="0 0 800 180" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'block' }}>
               {/* Monday */}
               <rect x="10" y="20" width="220" height="140" rx="12" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="2" />
@@ -266,7 +278,7 @@ export default function HowItWorksPage() {
         {/* Full Architecture SVG Diagram */}
         <section style={styles.section}>
           <h2 style={styles.sectionTitle}>The Full Picture</h2>
-          <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflowX: 'auto' }}>
+          <div className="hiw-svg-diagram" style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px var(--shadow-sm)', border: '1px solid var(--border-light)', overflowX: 'auto' }}>
             <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '900px', margin: '0 auto', display: 'block' }}>
               <defs>
                 <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -415,7 +427,7 @@ export default function HowItWorksPage() {
           </p>
 
           {/* DDNS vs Port Forwarding SVG */}
-          <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflowX: 'auto' }}>
+          <div className="hiw-svg-diagram" style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 1px 3px var(--shadow-sm)', border: '1px solid var(--border-light)', overflowX: 'auto' }}>
             <svg viewBox="0 0 800 260" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'block' }}>
               <defs>
                 <marker id="pfArrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -503,7 +515,7 @@ export default function HowItWorksPage() {
                   ].map(([service, port, desc]) => (
                     <tr key={service}>
                       <td><strong>{service}</strong></td>
-                      <td><code style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>{port}</code></td>
+                      <td><code style={{ fontSize: '0.8rem', background: 'var(--bg-secondary)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>{port}</code></td>
                       <td>{desc}</td>
                     </tr>
                   ))}
@@ -513,7 +525,7 @@ export default function HowItWorksPage() {
           </div>
 
           {/* How to set up port forwarding */}
-          <div style={{ marginTop: '1.5rem', background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+          <div style={{ marginTop: '1.5rem', background: 'var(--bg-card)', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px var(--shadow-sm)', border: '1px solid var(--border-light)' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.5rem' }}>How to set up port forwarding</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1rem' }}>
               Every router is different, but the general steps are:
