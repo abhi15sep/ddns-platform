@@ -15,6 +15,7 @@ import ApiDocsPage from './pages/ApiDocsPage';
 import StatusPage from './pages/StatusPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import OnboardingPage from './pages/OnboardingPage';
 
 interface ThemeContextType {
   theme: 'light' | 'dark';
@@ -123,6 +124,14 @@ export default function App() {
           }
         />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/downloads" element={<DownloadsPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/api-docs" element={<ApiDocsPage />} />
