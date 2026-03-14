@@ -69,7 +69,7 @@
 | Desktop Client | No | Yes (closed) | No | **Yes (open source)** |
 | No Monthly Confirmation | N/A | No | N/A | **Yes** |
 | Custom Zone | No | Paid | Paid | **Yes** |
-| Dark Mode | No | No | No | **Planned** |
+| Dark Mode | No | No | No | **Yes** |
 | IPv6 Support | Yes | Paid | Yes | **Yes (free)** |
 | Audit Log | No | Paid | Paid | **Yes (free)** |
 
@@ -304,10 +304,10 @@ Create comprehensive README at `client-app/README.md` (see separate file).
 | 11 | Build Electron binaries (macOS x64/arm64, Windows, Linux deb/AppImage) | 1 day | **DONE** |
 | 12 | Live connectivity diagram (dashboard + desktop client) | 0.5 day | **DONE** |
 | 13 | Configurable rate limits via admin console (per-token, per-account) | 0.5 day | **DONE** |
-| 14 | API docs page (interactive explorer) | 1 day | PENDING |
-| 15 | Status page (public service health) | 0.5 day | PENDING |
-| 16 | Email/webhook notifications on IP change | 1 day | PENDING |
-| 17 | Password reset flow | 0.5 day | PENDING |
+| 14 | API docs page (interactive explorer) | 1 day | **DONE** |
+| 15 | Status page (public service health) | 0.5 day | **DONE** |
+| 16 | Webhook notifications on IP change | 1 day | **DONE** |
+| 17 | Password reset flow | 0.5 day | **DONE** |
 | 18 | 2FA/TOTP support | 1 day | PENDING |
 
 ### What Was Completed
@@ -321,12 +321,24 @@ Create comprehensive README at `client-app/README.md` (see separate file).
 - `dashboard/src/styles/global.css` — Major expansion with navbar, stats bar, domain cards, badges, toasts, tabs, setup grid, loading spinner, responsive breakpoints
 - `client-app/README.md` — Comprehensive desktop client documentation with install instructions for 8 platforms
 
+**Phase 3 — Enhanced Features:**
+- `dashboard/src/pages/ApiDocsPage.tsx` — Interactive API reference with 9 endpoints, expandable accordion UI, language tabs (cURL/Python/JavaScript), auth explanation, rate limits table, error codes
+- `dashboard/src/pages/StatusPage.tsx` — Live health checks for API Server, Database, DNS Resolution; auto-refreshes every 60s; overall status banner with troubleshooting hints
+- `server/src/routes/update.ts` — Webhook trigger on IP change with Discord/Slack/custom JSON format support, 10s timeout
+- `server/src/routes/domains.ts` — PUT /:subdomain/webhook endpoint for managing webhook URLs with validation
+- `dashboard/src/pages/DomainDetail.tsx` — Notifications tab with webhook URL configuration, save/remove, supported format docs
+- `db/migrations/007_add_webhook_to_domains.sql` — Added webhook_url column to domains table
+
+**Password Reset Flow:**
+- `db/migrations/008_create_password_reset_tokens.sql` — Token table with SHA-256 hashed tokens, expiry, single-use
+- `server/src/email.ts` — Nodemailer SMTP transport with HTML reset email template
+- `server/src/routes/auth.ts` — POST /auth/forgot-password (rate limited, no email enumeration) and POST /auth/reset-password (token validation)
+- `dashboard/src/pages/ForgotPasswordPage.tsx` — Email input form with success confirmation UI
+- `dashboard/src/pages/ResetPasswordPage.tsx` — New password form with token validation, error states
+- `dashboard/src/pages/LoginPage.tsx` — Added "Forgot your password?" link
+
 ### What's Pending Next
-1. **API docs page** — interactive Swagger-like explorer with code examples
-2. **Public status page** — service health, DNS resolution, uptime
-3. **Email/webhook notifications** — alert when IP changes
-4. **Password reset flow** — email-based password recovery
-5. **2FA/TOTP support** — Google Authenticator / Authy
+1. **2FA/TOTP support** — Google Authenticator / Authy
 
 ---
 
