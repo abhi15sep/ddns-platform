@@ -36,8 +36,9 @@ A self-hosted Dynamic DNS platform (better than DuckDNS) with a web dashboard, S
 6. [Step-by-Step: Hostinger VPS Production Deployment](#step-by-step-hostinger-vps-production-deployment)
 7. [Step-by-Step: Porkbun DNS Delegation](#step-by-step-porkbun-dns-delegation)
 8. [How to Use the DDNS Service](#how-to-use-the-ddns-service)
-9. [Documentation](#documentation)
-10. [Troubleshooting](#troubleshooting)
+9. [Admin Console](#admin-console)
+10. [Documentation](#documentation)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -48,16 +49,21 @@ Your home internet IP changes frequently. This platform lets you (and your users
 **Features**:
 - Web dashboard to manage domains, view IP history, copy update URLs
 - SSO login (Google, GitHub, Microsoft) plus email/password
+- Password reset via email (SMTP/Gmail)
 - A and AAAA records (IPv4 + IPv6)
 - Desktop client app for non-developers (Windows, macOS, Linux)
-- Up to 3 subdomains per user
+- Up to 5 subdomains per user
 - Per-domain scoped tokens
-- IP change history (last hour, auto-pruned)
-- DuckDNS-compatible update API (works with router firmware)
-- Rate limiting and abuse protection
+- IP change history (last 3 hours, auto-pruned)
+- Webhook notifications on IP change (Discord, Telegram, Slack, custom)
+- Simple HTTP GET update API (works with router firmware)
+- Configurable rate limiting (per-token and per-account via admin console)
 - Dark mode with system preference detection
-- Admin console — user management, activity monitoring, block/unblock users
-- Profile page with password change, API token, and account deletion
+- Admin console — user management, activity monitoring, rate limit settings, block/unblock users
+- Profile page with password change, API token management, and account deletion
+- Interactive API documentation page (`/api-docs`)
+- Live status page with health checks (`/status`)
+- "How It Works" page with SVG flow diagrams
 
 ---
 
@@ -110,12 +116,18 @@ ddns-platform/
 ├── server/                  # Backend API (Node.js + Express + TypeScript)
 │   └── src/
 │       ├── app.ts           # Express entry point (port 3001)
-│       ├── config.ts        # Environment validation
+│       ├── config.ts        # Environment validation (incl. SMTP config)
 │       ├── db.ts            # PostgreSQL connection
+│       ├── email.ts         # Nodemailer SMTP transport (password reset emails)
 │       ├── powerdns.ts      # PowerDNS REST API client
 │       ├── auth/passport.ts # OAuth + local auth strategies
 │       ├── middleware/      # JWT auth, error handling, admin check
-│       └── routes/          # health, auth, update, domains, admin
+│       └── routes/
+│           ├── health.ts    # GET /health
+│           ├── auth.ts      # Login, register, OAuth, forgot/reset password
+│           ├── update.ts    # GET /update (DDNS update endpoint + webhook trigger)
+│           ├── domains.ts   # CRUD domains, webhook URL, token regeneration
+│           └── admin.ts     # Admin stats, users, activity, settings
 │
 ├── dashboard/               # Web frontend (React + Vite + TypeScript)
 │   └── src/
@@ -123,8 +135,21 @@ ddns-platform/
 │       ├── api/client.ts    # API calls to backend
 │       ├── hooks/useAuth.ts # Auth state management
 │       ├── hooks/useTheme.ts # Dark/light theme with localStorage
-│       └── pages/           # Login, Register, DomainList, DomainDetail,
-│                            # AdminPage, ProfilePage, HowItWorks, Downloads
+│       └── pages/
+│           ├── LandingPage.tsx       # Public landing page
+│           ├── LoginPage.tsx         # Email/password + OAuth login
+│           ├── RegisterPage.tsx      # Registration
+│           ├── ForgotPasswordPage.tsx # Request password reset email
+│           ├── ResetPasswordPage.tsx  # Set new password with token
+│           ├── DomainList.tsx        # Dashboard with domain cards
+│           ├── DomainDetail.tsx      # Domain detail (Update URL, History,
+│           │                         #   Notifications, Setup Guide tabs)
+│           ├── ProfilePage.tsx       # Password change, API token, delete account
+│           ├── AdminPage.tsx         # Admin console
+│           ├── DownloadsPage.tsx     # Desktop app downloads + scripts
+│           ├── HowItWorksPage.tsx    # How It Works with SVG diagrams
+│           ├── ApiDocsPage.tsx       # Interactive API documentation
+│           └── StatusPage.tsx        # Live service health checks
 │
 ├── client-app/              # Desktop app (Electron) for non-developers
 │   └── src/
@@ -142,12 +167,16 @@ ddns-platform/
 │   ├── 002_create_oauth_accounts.sql
 │   ├── 003_create_domains.sql
 │   ├── 004_create_update_log.sql
-│   └── 005_add_blocked_to_users.sql
+│   ├── 005_add_blocked_to_users.sql
+│   ├── 006_create_settings.sql
+│   ├── 007_add_webhook_to_domains.sql
+│   └── 008_create_password_reset_tokens.sql
 │
 ├── docs/                    # Detailed docs for each component
 ├── docker-compose.yml       # Dev databases (PostgreSQL, MySQL, PowerDNS)
 ├── .env.example             # All config variables with descriptions
 ├── PLAN.md                  # Implementation plan
+├── IMPROVEMENT-PLAN.md      # Feature roadmap with status tracking
 └── package.json             # npm workspace root
 ```
 
@@ -195,6 +224,13 @@ DDNS_ZONE=dyn.devops-monk.com
 JWT_SECRET=dev-jwt-secret-change-in-production-min-16-chars
 APP_URL=http://localhost:5173
 API_URL=http://localhost:3001
+
+# SMTP (optional for local dev — leave empty to skip password reset emails)
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=noreply@devops-monk.com
 ```
 
 ### Step 3: Start the databases
@@ -226,7 +262,7 @@ npm install
 npm run migrate
 ```
 
-**What this does**: Creates the `users`, `oauth_accounts`, `domains`, and `update_log` tables in PostgreSQL, and adds the `blocked` column for user management.
+**What this does**: Creates all PostgreSQL tables — users, oauth_accounts, domains, update_log, settings, and password_reset_tokens. Also adds the `blocked` column and `webhook_url` column.
 
 **If you get a connection error**: Wait 10 seconds for PostgreSQL to fully start, then try again.
 
@@ -505,6 +541,13 @@ JWT_SECRET=RUN_openssl_rand_-hex_32_AND_PASTE_HERE
 APP_URL=https://ddns.devops-monk.com
 API_URL=https://api.devops-monk.com
 
+# SMTP — for password reset emails (Gmail example)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-gmail-app-password
+SMTP_FROM=your-email@gmail.com
+
 # OAuth (optional — skip if you only want email/password login)
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
@@ -526,6 +569,9 @@ sudo -u postgres psql -p PORT -d ddns -f db/migrations/002_create_oauth_accounts
 sudo -u postgres psql -p PORT -d ddns -f db/migrations/003_create_domains.sql
 sudo -u postgres psql -p PORT -d ddns -f db/migrations/004_create_update_log.sql
 sudo -u postgres psql -p PORT -d ddns -f db/migrations/005_add_blocked_to_users.sql
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/006_create_settings.sql
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/007_add_webhook_to_domains.sql
+sudo -u postgres psql -p PORT -d ddns -f db/migrations/008_create_password_reset_tokens.sql
 ```
 
 **IMPORTANT — Grant permissions to ddnsuser** (the app user needs access to tables):
@@ -703,7 +749,49 @@ pm2 status
    cd /opt/ddns-platform/server && npm run build && pm2 restart ddns-api
    ```
 
-### Step 18: Set up automated backups
+### Step 18: Set up SMTP for password reset emails
+
+> Required for the "Forgot your password?" flow. Without SMTP, password resets will silently fail (no error to users, but no email sent).
+
+**Using Gmail (free):**
+
+1. Enable **2-Step Verification** on your Google account:
+   - Go to https://myaccount.google.com/security
+   - Turn on 2-Step Verification
+
+2. Create an **App Password**:
+   - Go to https://myaccount.google.com/apppasswords
+   - App name: `DDNS`
+   - Click **Create**
+   - Copy the 16-character password
+
+3. Add to `.env` on VPS:
+   ```bash
+   nano /opt/ddns-platform/.env
+   ```
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=abcdefghijklmnop
+   SMTP_FROM=your-email@gmail.com
+   ```
+
+4. Restart:
+   ```bash
+   pm2 restart ddns-api
+   ```
+
+**Using other SMTP providers:**
+
+| Provider | SMTP_HOST | SMTP_PORT | Notes |
+|----------|-----------|-----------|-------|
+| Gmail | smtp.gmail.com | 587 | Requires app password (2FA must be on) |
+| Zoho | smtp.zoho.com | 587 | Free tier available |
+| Outlook | smtp.office365.com | 587 | Microsoft account |
+| Mailgun | smtp.mailgun.org | 587 | 5,000 free emails/month |
+
+### Step 19: Set up automated backups
 
 ```bash
 mkdir -p /var/backups/ddns
@@ -889,12 +977,13 @@ sudo -u postgres psql -d ddns -c "UPDATE users SET is_admin = TRUE WHERE email =
 ```
 
 **Features**:
-- **Stats dashboard** — total users, total domains, updates in the last hour, blocked users
+- **Stats dashboard** — total users, total domains, updates in the last 3 hours, blocked users
 - **User management** — search users by email, view their domains, block/unblock accounts
-- **Activity monitor** — see which domains have the most updates in the last hour, with abuse indicators (>20 updates/hour flagged as HIGH)
+- **Activity monitor** — see which domains have the most updates in the last 3 hours, with abuse indicators (>20 updates flagged as HIGH)
+- **Rate limit settings** — configure per-token and per-account rate limits and time window via the UI
 - **Block/unblock** — blocked users cannot log in or update DNS records
 
-The admin link appears conditionally in the dashboard navbar only for admin users.
+The admin link appears conditionally in the navbar on all pages for admin users.
 
 ---
 
@@ -1095,10 +1184,20 @@ rm -rf /opt/ddns-platform
 
 ```bash
 cd /opt/ddns-platform
-git pull
-cd server && npm run build && cd ..
-cd dashboard && npm run build && cd ..
-npm run migrate
+git pull origin main
+
+# Install any new dependencies
+cd server && npm install && npm run build && cd ..
+cd dashboard && npx vite build && cd ..
+
+# Run any new migrations (safe to re-run — all use IF NOT EXISTS / IF NOT EXISTS)
+for f in db/migrations/*.sql; do
+  sudo -u postgres psql -d ddns -f "$f"
+done
+
+# Grant permissions for any new tables
+sudo -u postgres psql -d ddns -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ddnsuser; GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ddnsuser;"
+
 pm2 restart ddns-api
 ```
 
