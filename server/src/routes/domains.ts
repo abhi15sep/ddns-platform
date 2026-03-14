@@ -84,11 +84,11 @@ router.post('/:subdomain/regenerate-token', async (req: Request, res: Response) 
   res.json(result.rows[0]);
 });
 
-// Get update history (last 1 hour)
+// Get update history (last 3 hours)
 router.get('/:subdomain/history', async (req: Request, res: Response) => {
   const result = await pool.query(
     `SELECT ip, source_ip, user_agent, updated_at FROM update_log
-     WHERE domain=$1 AND updated_at >= NOW() - INTERVAL '1 hour'
+     WHERE domain=$1 AND updated_at >= NOW() - INTERVAL '3 hours'
      ORDER BY updated_at DESC LIMIT 200`,
     [req.params.subdomain]
   );

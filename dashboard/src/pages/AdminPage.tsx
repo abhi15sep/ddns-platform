@@ -238,7 +238,7 @@ export default function AdminPage() {
                   <div className="stat-value">{stats.totalDomains}</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-label">Updates (1h)</div>
+                  <div className="stat-label">Updates (3h)</div>
                   <div className="stat-value">{stats.updatesLastHour}</div>
                 </div>
                 <div className="stat-card">
@@ -391,14 +391,14 @@ export default function AdminPage() {
             {activeTab === 'activity' && (
               <>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                  Domains with the most updates in the last hour. High update counts may indicate abuse.
+                  Domains with the most updates in the last 3 hours. High update counts may indicate abuse.
                 </p>
                 <table className="domain-table">
                   <thead>
                     <tr>
                       <th>Domain</th>
                       <th>Owner</th>
-                      <th>Updates (1h)</th>
+                      <th>Updates (3h)</th>
                       <th>Last IP</th>
                       <th>Last Update</th>
                       <th>Actions</th>
@@ -450,7 +450,7 @@ export default function AdminPage() {
                     {activity.length === 0 && (
                       <tr>
                         <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
-                          No activity in the last hour.
+                          No activity in the last 3 hours.
                         </td>
                       </tr>
                     )}

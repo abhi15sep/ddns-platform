@@ -12,7 +12,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
   const [users, domains, updates, blocked] = await Promise.all([
     pool.query('SELECT COUNT(*) FROM users'),
     pool.query('SELECT COUNT(*) FROM domains'),
-    pool.query("SELECT COUNT(*) FROM update_log WHERE updated_at >= NOW() - INTERVAL '1 hour'"),
+    pool.query("SELECT COUNT(*) FROM update_log WHERE updated_at >= NOW() - INTERVAL '3 hours'"),
     pool.query('SELECT COUNT(*) FROM users WHERE blocked = TRUE'),
   ]);
 
@@ -95,7 +95,7 @@ router.get('/activity', async (_req: Request, res: Response) => {
     FROM update_log l
     JOIN domains d ON d.subdomain = l.domain
     JOIN users u ON u.id = d.user_id
-    WHERE l.updated_at >= NOW() - INTERVAL '1 hour'
+    WHERE l.updated_at >= NOW() - INTERVAL '3 hours'
     GROUP BY l.domain, u.email, u.id, u.blocked
     ORDER BY update_count DESC
     LIMIT 50

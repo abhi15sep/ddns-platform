@@ -411,9 +411,9 @@ export default function DomainDetail() {
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                 </div>
-                <div className="empty-state-title">No updates in the last hour</div>
+                <div className="empty-state-title">No updates in the last 3 hours</div>
                 <div className="empty-state-desc">
-                  Update logs are kept for 1 hour. Send an update using the Update URL tab to see IP history here.
+                  Update logs are kept for 3 hours. Send an update using the Update URL tab to see IP history here.
                 </div>
               </div>
             )}
