@@ -19,12 +19,12 @@ const SNIPPETS: Record<TabKey, string> = {
 crontab -e
 
 # Paste this line:
-*/5 * * * * curl -s "https://ddns.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN" > /dev/null`,
+*/5 * * * * curl -s "https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN" > /dev/null`,
   windows: `# Run in PowerShell as Administrator
 # Create a scheduled task that runs every 5 minutes
 
 $action = New-ScheduledTaskAction -Execute "powershell.exe" \`
-  -Argument '-Command "Invoke-WebRequest -Uri \\"https://ddns.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN\\" -UseBasicParsing"'
+  -Argument '-Command "Invoke-WebRequest -Uri \\"https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN\\" -UseBasicParsing"'
 $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -Once -At (Get-Date)
 Register-ScheduledTask -TaskName "DDNS-Update" -Action $action -Trigger $trigger -Description "Update DDNS IP"`,
   docker: `# docker-compose.yml
@@ -36,13 +36,13 @@ services:
     entrypoint: /bin/sh
     command: >
       -c "while true; do
-        curl -s 'https://ddns.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN';
+        curl -s 'https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN';
         sleep 300;
       done"`,
   synology: `# Synology DSM > Control Panel > External Access > DDNS
 # Provider: Custom
 # Query URL:
-https://ddns.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN
+https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN
 
 # Hostname: SUBDOMAIN.dyn.devops-monk.com
 # Username/Password: leave blank (token is in the URL)`,
@@ -56,13 +56,13 @@ config service 'ddns'
   option enabled '1'
   option service_name 'custom'
   option domain 'SUBDOMAIN'
-  option update_url 'https://ddns.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN'
+  option update_url 'https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN'
   option check_interval '5'
   option check_unit 'minutes'`,
   rpi: `# Raspberry Pi — works with any Linux method
 # Option 1: cron (recommended)
 crontab -e
-*/5 * * * * curl -s "https://ddns.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN" > /dev/null
+*/5 * * * * curl -s "https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN" > /dev/null
 
 # Option 2: systemd timer
 sudo tee /etc/systemd/system/ddns-update.service << 'EOF'
@@ -71,7 +71,7 @@ Description=DDNS IP Update
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/curl -s "https://ddns.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN"
+ExecStart=/usr/bin/curl -s "https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN"
 EOF
 
 sudo tee /etc/systemd/system/ddns-update.timer << 'EOF'
@@ -251,7 +251,7 @@ export default function DownloadsPage() {
                 desc: (
                   <>
                     Set the server to{' '}
-                    <code className="dl-inline-code">https://ddns.devops-monk.com</code>
+                    <code className="dl-inline-code">https://api.devops-monk.com</code>
                   </>
                 ),
               },
