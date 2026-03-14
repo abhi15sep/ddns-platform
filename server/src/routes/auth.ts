@@ -4,8 +4,11 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
+import * as OTPAuth from 'otpauth';
+import QRCode from 'qrcode';
 import { pool } from '../db.js';
 import { config } from '../config.js';
+import { requireAuth, AuthUser } from '../middleware/requireAuth.js';
 import { sendPasswordResetEmail } from '../email.js';
 
 const router = Router();
@@ -30,15 +33,34 @@ function issueJWT(res: Response, user: { id: string; email: string }) {
   });
 }
 
+// Issue a short-lived temp token for 2FA flow (not a full session)
+function issueTempToken(userId: string): string {
+  return jwt.sign({ sub: userId, purpose: '2fa' }, config.JWT_SECRET, { expiresIn: '5m' });
+}
+
+async function userHas2FA(userId: string): Promise<boolean> {
+  const r = await pool.query('SELECT verified FROM totp_secrets WHERE user_id=$1', [userId]);
+  return r.rows.length > 0 && r.rows[0].verified;
+}
+
+// OAuth callback handler (shared logic for 2FA check)
+async function handleOAuthCallback(req: Request, res: Response) {
+  const user = req.user as any;
+  if (await userHas2FA(user.id)) {
+    const tempToken = issueTempToken(user.id);
+    res.redirect(`${config.APP_URL}/login?requires_2fa=1&temp_token=${tempToken}`);
+    return;
+  }
+  issueJWT(res, user);
+  res.redirect(`${config.APP_URL}/dashboard`);
+}
+
 // Google OAuth
 router.get('/google', passport.authenticate('google'));
 router.get(
   '/google/callback',
   passport.authenticate('google', { session: false, failureRedirect: `${config.APP_URL}/login?error=1` }),
-  (req: Request, res: Response) => {
-    issueJWT(res, req.user as any);
-    res.redirect(`${config.APP_URL}/dashboard`);
-  }
+  handleOAuthCallback
 );
 
 // GitHub OAuth
@@ -46,23 +68,94 @@ router.get('/github', passport.authenticate('github'));
 router.get(
   '/github/callback',
   passport.authenticate('github', { session: false, failureRedirect: `${config.APP_URL}/login?error=1` }),
-  (req: Request, res: Response) => {
-    issueJWT(res, req.user as any);
-    res.redirect(`${config.APP_URL}/dashboard`);
-  }
+  handleOAuthCallback
 );
 
 // Local login
 router.post('/login', authLimiter, (req: Request, res: Response, next) => {
-  passport.authenticate('local', { session: false }, (err: any, user: any, info: any) => {
+  passport.authenticate('local', { session: false }, async (err: any, user: any, info: any) => {
     if (err) return next(err);
     if (!user) {
       res.status(401).json({ error: info?.message || 'Invalid credentials' });
       return;
     }
+
+    // Check if user has 2FA enabled
+    if (await userHas2FA(user.id)) {
+      const tempToken = issueTempToken(user.id);
+      res.json({ requires_2fa: true, temp_token: tempToken });
+      return;
+    }
+
     issueJWT(res, user);
     res.json({ ok: true, user: { id: user.id, email: user.email } });
   })(req, res, next);
+});
+
+// Verify 2FA code during login
+router.post('/verify-2fa', authLimiter, async (req: Request, res: Response) => {
+  const { temp_token, code } = req.body;
+  if (!temp_token || !code) {
+    res.status(400).json({ error: 'Token and code are required' });
+    return;
+  }
+
+  try {
+    const payload = jwt.verify(temp_token, config.JWT_SECRET) as any;
+    if (payload.purpose !== '2fa') {
+      res.status(400).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const userId = payload.sub;
+
+    // Get TOTP secret
+    const secretResult = await pool.query(
+      'SELECT secret, backup_codes FROM totp_secrets WHERE user_id=$1 AND verified=TRUE',
+      [userId]
+    );
+    if (!secretResult.rows.length) {
+      res.status(400).json({ error: '2FA is not enabled' });
+      return;
+    }
+
+    const { secret, backup_codes } = secretResult.rows[0];
+    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
+    const delta = totp.validate({ token: code.trim(), window: 1 });
+
+    if (delta !== null) {
+      // Valid TOTP code — issue full session
+      const userResult = await pool.query('SELECT id, email FROM users WHERE id=$1', [userId]);
+      if (!userResult.rows.length) {
+        res.status(400).json({ error: 'User not found' });
+        return;
+      }
+      issueJWT(res, userResult.rows[0]);
+      res.json({ ok: true, user: userResult.rows[0] });
+      return;
+    }
+
+    // Check backup codes
+    if (backup_codes && Array.isArray(backup_codes)) {
+      const codeHash = crypto.createHash('sha256').update(code.trim()).digest('hex');
+      const idx = backup_codes.indexOf(codeHash);
+      if (idx !== -1) {
+        // Valid backup code — remove it and issue session
+        const updated = [...backup_codes];
+        updated.splice(idx, 1);
+        await pool.query('UPDATE totp_secrets SET backup_codes=$1 WHERE user_id=$2', [updated, userId]);
+
+        const userResult = await pool.query('SELECT id, email FROM users WHERE id=$1', [userId]);
+        issueJWT(res, userResult.rows[0]);
+        res.json({ ok: true, user: userResult.rows[0] });
+        return;
+      }
+    }
+
+    res.status(401).json({ error: 'Invalid code. Try again.' });
+  } catch {
+    res.status(401).json({ error: 'Token expired. Please log in again.' });
+  }
 });
 
 // Register
@@ -108,6 +201,121 @@ router.get('/me', (req: Request, res: Response) => {
 // Logout
 router.post('/logout', (_req: Request, res: Response) => {
   res.clearCookie('token');
+  res.json({ ok: true });
+});
+
+// 2FA status
+router.get('/2fa/status', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const r = await pool.query('SELECT verified FROM totp_secrets WHERE user_id=$1', [userId]);
+  res.json({ enabled: r.rows.length > 0 && r.rows[0].verified });
+});
+
+// Begin 2FA setup — generate secret and QR code
+router.post('/2fa/setup', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const userEmail = (req.user as AuthUser).email;
+
+  // Remove any unverified setup
+  await pool.query('DELETE FROM totp_secrets WHERE user_id=$1 AND verified=FALSE', [userId]);
+
+  // Check if already enabled
+  const existing = await pool.query('SELECT verified FROM totp_secrets WHERE user_id=$1', [userId]);
+  if (existing.rows.length && existing.rows[0].verified) {
+    res.status(400).json({ error: '2FA is already enabled. Disable it first to reconfigure.' });
+    return;
+  }
+
+  const secret = new OTPAuth.Secret({ size: 20 });
+  const totp = new OTPAuth.TOTP({
+    issuer: 'DevOps Monk DDNS',
+    label: userEmail,
+    secret,
+    digits: 6,
+    period: 30,
+  });
+
+  await pool.query(
+    'INSERT INTO totp_secrets (user_id, secret, verified) VALUES ($1, $2, FALSE)',
+    [userId, secret.base32]
+  );
+
+  const uri = totp.toString();
+  const qrDataUrl = await QRCode.toDataURL(uri);
+
+  res.json({ secret: secret.base32, qr: qrDataUrl, uri });
+});
+
+// Verify 2FA setup — confirm with a code to activate
+router.post('/2fa/verify-setup', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const { code } = req.body;
+
+  if (!code) {
+    res.status(400).json({ error: 'Verification code is required' });
+    return;
+  }
+
+  const secretResult = await pool.query(
+    'SELECT id, secret FROM totp_secrets WHERE user_id=$1 AND verified=FALSE',
+    [userId]
+  );
+  if (!secretResult.rows.length) {
+    res.status(400).json({ error: 'No pending 2FA setup found. Start setup first.' });
+    return;
+  }
+
+  const { id: rowId, secret } = secretResult.rows[0];
+  const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
+  const delta = totp.validate({ token: code.trim(), window: 1 });
+
+  if (delta === null) {
+    res.status(400).json({ error: 'Invalid code. Make sure your authenticator app is synced and try again.' });
+    return;
+  }
+
+  // Generate backup codes
+  const rawBackupCodes: string[] = [];
+  const hashedBackupCodes: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    const raw = crypto.randomBytes(4).toString('hex'); // 8-char hex codes
+    rawBackupCodes.push(raw);
+    hashedBackupCodes.push(crypto.createHash('sha256').update(raw).digest('hex'));
+  }
+
+  await pool.query(
+    'UPDATE totp_secrets SET verified=TRUE, backup_codes=$1 WHERE id=$2',
+    [hashedBackupCodes, rowId]
+  );
+
+  res.json({ ok: true, backup_codes: rawBackupCodes });
+});
+
+// Disable 2FA
+router.post('/2fa/disable', requireAuth, async (req: Request, res: Response) => {
+  const userId = (req.user as AuthUser).sub;
+  const { password } = req.body;
+
+  // Require password confirmation for security
+  const userResult = await pool.query('SELECT password_hash FROM users WHERE id=$1', [userId]);
+  if (userResult.rows[0]?.password_hash) {
+    if (!password) {
+      res.status(400).json({ error: 'Password is required to disable 2FA' });
+      return;
+    }
+    const valid = await bcrypt.compare(password, userResult.rows[0].password_hash);
+    if (!valid) {
+      res.status(401).json({ error: 'Incorrect password' });
+      return;
+    }
+  }
+
+  const result = await pool.query('DELETE FROM totp_secrets WHERE user_id=$1 RETURNING id', [userId]);
+  if (!result.rows.length) {
+    res.status(400).json({ error: '2FA is not enabled' });
+    return;
+  }
+
   res.json({ ok: true });
 });
 

@@ -52,6 +52,14 @@ export const forgotPassword = (email: string) =>
 export const resetPassword = (token: string, password: string) =>
   api.post('/auth/reset-password', { token, password });
 
+// 2FA
+export const get2FAStatus = () => api.get('/auth/2fa/status');
+export const setup2FA = () => api.post('/auth/2fa/setup');
+export const verifySetup2FA = (code: string) => api.post('/auth/2fa/verify-setup', { code });
+export const disable2FA = (password: string) => api.post('/auth/2fa/disable', { password });
+export const verify2FA = (temp_token: string, code: string) =>
+  api.post('/auth/verify-2fa', { temp_token, code });
+
 // Admin
 export const checkAdmin = () => api.get('/api/admin/check');
 export const getAdminStats = () => api.get('/api/admin/stats');

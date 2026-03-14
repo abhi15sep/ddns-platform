@@ -9,6 +9,10 @@ import {
   regenerateApiToken,
   deleteAccount,
   checkAdmin,
+  get2FAStatus,
+  setup2FA,
+  verifySetup2FA,
+  disable2FA,
 } from '../api/client';
 
 interface Toast {
@@ -49,6 +53,16 @@ export default function ProfilePage() {
   // Admin
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // 2FA
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [twoFALoading, setTwoFALoading] = useState(true);
+  const [setupQR, setSetupQR] = useState('');
+  const [setupSecret, setSetupSecret] = useState('');
+  const [setupCode, setSetupCode] = useState('');
+  const [setupError, setSetupError] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [disablePassword, setDisablePassword] = useState('');
+
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -84,6 +98,11 @@ export default function ProfilePage() {
       .finally(() => setTokenLoading(false));
 
     checkAdmin().then(() => setIsAdmin(true)).catch(() => {});
+
+    get2FAStatus()
+      .then((r) => setTwoFAEnabled(r.data.enabled))
+      .catch(() => {})
+      .finally(() => setTwoFALoading(false));
   }, [user]);
 
   async function handleLogout() {
@@ -393,6 +412,168 @@ export default function ProfilePage() {
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 No API token available. Your account may not support programmatic access yet.
               </p>
+            )}
+          </div>
+        </section>
+
+        {/* Two-Factor Authentication */}
+        <section>
+          <div className="section-label">Two-Factor Authentication (2FA)</div>
+          <div className="info-card">
+            {twoFALoading ? (
+              <div className="loading" style={{ padding: '1rem' }}>Loading...</div>
+            ) : twoFAEnabled && !backupCodes.length ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--badge-active-text)', display: 'inline-block' }} />
+                  <span style={{ fontWeight: 600, color: 'var(--text-heading)' }}>2FA is enabled</span>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  Your account is protected with an authenticator app. To disable 2FA, enter your password below.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', maxWidth: '400px' }}>
+                  <input
+                    type="password"
+                    placeholder="Enter your password"
+                    value={disablePassword}
+                    onChange={(e) => setDisablePassword(e.target.value)}
+                    style={{
+                      flex: 1, padding: '0.65rem 0.75rem',
+                      border: '1px solid var(--border-input)', borderRadius: '6px',
+                      fontSize: '0.875rem', background: 'var(--bg-input)', color: 'var(--text-primary)',
+                    }}
+                  />
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={async () => {
+                      try {
+                        await disable2FA(disablePassword);
+                        setTwoFAEnabled(false);
+                        setDisablePassword('');
+                        addToast('2FA disabled', 'success');
+                      } catch (err: any) {
+                        addToast(err.response?.data?.error || 'Failed to disable 2FA', 'error');
+                      }
+                    }}
+                  >
+                    Disable 2FA
+                  </button>
+                </div>
+              </>
+            ) : backupCodes.length > 0 ? (
+              <>
+                <div style={{ fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.5rem' }}>
+                  2FA Enabled — Save Your Backup Codes
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.6 }}>
+                  Save these backup codes in a safe place. Each code can only be used once. If you lose access to your authenticator app, you can use a backup code to sign in.
+                </p>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem',
+                  padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px',
+                  marginBottom: '1rem', fontFamily: 'monospace', fontSize: '0.9rem', textAlign: 'center',
+                }}>
+                  {backupCodes.map((code) => (
+                    <div key={code} style={{ padding: '0.35rem', background: 'var(--bg-primary)', borderRadius: '4px' }}>
+                      {code}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(backupCodes.join('\n'));
+                      addToast('Backup codes copied', 'success');
+                    }}
+                  >
+                    Copy All
+                  </button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setBackupCodes([])}
+                  >
+                    I've Saved Them
+                  </button>
+                </div>
+              </>
+            ) : setupQR ? (
+              <>
+                <div style={{ fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.5rem' }}>
+                  Scan this QR code with your authenticator app
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  Use Google Authenticator, Authy, 1Password, or any TOTP-compatible app.
+                </p>
+                <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                  <img src={setupQR} alt="TOTP QR Code" style={{ width: 200, height: 200, borderRadius: '8px' }} />
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem', textAlign: 'center' }}>
+                  Can't scan? Enter this key manually: <code style={{ wordBreak: 'break-all' }}>{setupSecret}</code>
+                </p>
+                {setupError && <div className="error-message" style={{ marginBottom: '0.75rem' }}>{setupError}</div>}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSetupError('');
+                    try {
+                      const r = await verifySetup2FA(setupCode);
+                      setTwoFAEnabled(true);
+                      setBackupCodes(r.data.backup_codes);
+                      setSetupQR('');
+                      setSetupSecret('');
+                      setSetupCode('');
+                      addToast('2FA enabled successfully', 'success');
+                    } catch (err: any) {
+                      setSetupError(err.response?.data?.error || 'Verification failed');
+                    }
+                  }}
+                  style={{ display: 'flex', gap: '0.5rem', maxWidth: '320px', margin: '0 auto' }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    value={setupCode}
+                    onChange={(e) => setSetupCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    autoComplete="one-time-code"
+                    style={{
+                      flex: 1, padding: '0.65rem 0.75rem',
+                      border: '1px solid var(--border-input)', borderRadius: '6px',
+                      fontSize: '1.1rem', background: 'var(--bg-input)', color: 'var(--text-primary)',
+                      textAlign: 'center', letterSpacing: '0.2em', fontFamily: 'monospace',
+                    }}
+                  />
+                  <button type="submit" className="btn btn-primary btn-sm">Verify</button>
+                </form>
+                <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => { setSetupQR(''); setSetupSecret(''); setSetupCode(''); setSetupError(''); }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  Add an extra layer of security by requiring a code from your authenticator app when signing in.
+                </p>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={async () => {
+                    try {
+                      const r = await setup2FA();
+                      setSetupQR(r.data.qr);
+                      setSetupSecret(r.data.secret);
+                    } catch (err: any) {
+                      addToast(err.response?.data?.error || 'Failed to start 2FA setup', 'error');
+                    }
+                  }}
+                >
+                  Enable 2FA
+                </button>
+              </>
             )}
           </div>
         </section>
