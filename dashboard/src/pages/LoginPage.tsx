@@ -25,10 +25,10 @@ export default function LoginPage() {
         <h1>Sign in to DDNS</h1>
 
         <div className="sso-buttons">
-          <a href="/auth/google" className="btn btn-sso btn-google">
+          <a href={`${import.meta.env.VITE_API_URL || ''}/auth/google`} className="btn btn-sso btn-google">
             Continue with Google
           </a>
-          <a href="/auth/github" className="btn btn-sso btn-github">
+          <a href={`${import.meta.env.VITE_API_URL || ''}/auth/github`} className="btn btn-sso btn-github">
             Continue with GitHub
           </a>
         </div>

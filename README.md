@@ -604,7 +604,9 @@ chmod +x /etc/cron.daily/ddns-backup
 
 ## Step-by-Step: Porkbun DNS Delegation
 
-> This tells the internet that your Hostinger VPS is the authoritative DNS server for `dyn.devops-monk.com`.
+> **IMPORTANT**: Complete this BEFORE Step 13 (Certbot). Certbot needs these DNS records to exist before it can issue HTTPS certificates.
+>
+> This tells the internet that your Hostinger VPS handles DNS for `dyn.devops-monk.com` and serves the dashboard/API.
 > These are NEW records — they do NOT affect your existing `gift.devops-monk.com` DNS.
 
 ### Step 1: Log in to Porkbun
@@ -615,20 +617,44 @@ Go to [porkbun.com](https://porkbun.com) and log in.
 
 Click **Domain Management** → find `devops-monk.com` → click **DNS**.
 
-### Step 3: Verify your existing gift record is there
+### Step 3: Verify your existing records are there
 
-You should see an existing A record for `gift` pointing to your VPS IP. **Do not touch it.**
+You should see your existing records including `CNAME gift → srv870470.hstgr.cloud`. **Do not touch any existing records.**
 
-### Step 4: Add the A record for your nameserver
+### Step 4: Add CNAME records for dashboard, API, and nameserver
 
-This tells the internet where `ns1.devops-monk.com` lives.
+We use CNAME records pointing to your Hostinger VPS hostname (same pattern as your gift site).
+
+**Add CNAME for `ddns`** (dashboard):
 
 | Field | Value |
 |-------|-------|
-| Type | **A** |
+| Type | **CNAME** |
+| Host | **ddns** |
+| Answer | **srv870470.hstgr.cloud** |
+| TTL | **600** |
+
+Click **Add**.
+
+**Add CNAME for `api`** (backend API):
+
+| Field | Value |
+|-------|-------|
+| Type | **CNAME** |
+| Host | **api** |
+| Answer | **srv870470.hstgr.cloud** |
+| TTL | **600** |
+
+Click **Add**.
+
+**Add CNAME for `ns1`** (PowerDNS nameserver):
+
+| Field | Value |
+|-------|-------|
+| Type | **CNAME** |
 | Host | **ns1** |
-| Answer | **YOUR_HOSTINGER_VPS_IP** (e.g., `154.x.x.x`) |
-| TTL | **300** |
+| Answer | **srv870470.hstgr.cloud** |
+| TTL | **600** |
 
 Click **Add**.
 
@@ -641,37 +667,31 @@ This tells the internet that your VPS handles all DNS for `*.dyn.devops-monk.com
 | Type | **NS** |
 | Host | **dyn** |
 | Answer | **ns1.devops-monk.com** |
-| TTL | **300** |
+| TTL | **600** |
 
 Click **Add**.
 
-### Step 6: Add A records for the web dashboard and API
+### Step 6: Wait for DNS propagation
 
-| Field | Value |
-|-------|-------|
-| Type | **A** |
-| Host | **ddns** |
-| Answer | **YOUR_HOSTINGER_VPS_IP** |
-| TTL | **300** |
+DNS changes usually take 2-5 minutes, but can take up to 48 hours.
 
-| Field | Value |
-|-------|-------|
-| Type | **A** |
-| Host | **api** |
-| Answer | **YOUR_HOSTINGER_VPS_IP** |
-| TTL | **300** |
-
-### Step 7: Wait for DNS propagation
-
-DNS changes can take up to 48 hours to propagate, but usually it's 5-30 minutes.
-
-**Check propagation**:
+**Check propagation** (from your local machine, not the VPS):
 ```bash
-# From your local machine (not the VPS)
-dig ns1.devops-monk.com A
-dig dyn.devops-monk.com NS
+dig ddns.devops-monk.com
+dig api.devops-monk.com
+dig ns1.devops-monk.com
 
-# Should return your VPS IP and ns1.devops-monk.com respectively
+# All three should resolve to your VPS IP
+
+dig dyn.devops-monk.com NS
+# Should return ns1.devops-monk.com
+```
+
+### Step 7: Now run Certbot (back on the VPS)
+
+Once the DNS records resolve, go back to your VPS and run:
+```bash
+certbot --nginx -d ddns.devops-monk.com -d api.devops-monk.com
 ```
 
 ### Step 8: Verify the full chain
@@ -692,15 +712,15 @@ curl -I https://gift.devops-monk.com
 
 ### Porkbun DNS summary — what it should look like
 
-After completing the steps, your Porkbun DNS should have these records:
+After completing the steps, your Porkbun DNS should have these new records alongside your existing ones:
 
 | Type | Host | Answer | Status |
 |------|------|--------|--------|
-| A | `gift` | `YOUR_VPS_IP` | **EXISTING — do not touch** |
-| A | `ns1` | `YOUR_VPS_IP` | NEW |
+| CNAME | `gift` | `srv870470.hstgr.cloud` | **EXISTING — do not touch** |
+| CNAME | `ddns` | `srv870470.hstgr.cloud` | NEW |
+| CNAME | `api` | `srv870470.hstgr.cloud` | NEW |
+| CNAME | `ns1` | `srv870470.hstgr.cloud` | NEW |
 | NS | `dyn` | `ns1.devops-monk.com` | NEW |
-| A | `ddns` | `YOUR_VPS_IP` | NEW |
-| A | `api` | `YOUR_VPS_IP` | NEW |
 
 ---
 
