@@ -332,6 +332,16 @@ export default function DownloadsPage() {
             </a>
           ))}
         </div>
+
+        {/* macOS Gatekeeper note */}
+        <div className="dl-macos-note">
+          <strong>macOS users:</strong> If you see <em>"DDNS Client is damaged and can't be opened"</em>, macOS is blocking
+          the app because it isn't code-signed. Open Terminal and run:
+          <div className="dl-code-block" style={{ marginTop: '0.5rem' }}>
+            <pre>xattr -cr "/Applications/DDNS Client.app"</pre>
+          </div>
+          Then open the app normally. This is a one-time step.
+        </div>
       </section>
 
       {/* Quick Setup */}

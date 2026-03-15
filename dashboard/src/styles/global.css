@@ -1729,6 +1729,21 @@ section {
   transition: background 0.2s;
 }
 
+/* macOS note */
+.dl-macos-note {
+  margin-top: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.dl-macos-note strong {
+  color: var(--text-heading);
+}
+
 /* CTA */
 .dl-cta {
   text-align: center;
