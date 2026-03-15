@@ -53,6 +53,14 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             git clean -fd --exclude=.env
+
+            # Run any new migrations as ddnsuser (not postgres) to avoid permission issues
+            for f in db/migrations/*.sql; do
+              sudo -u postgres psql -p 5433 ddns -f "$f" 2>/dev/null || true
+            done
+            # Ensure ddnsuser has access to all tables and sequences
+            sudo -u postgres psql -p 5433 ddns -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO ddnsuser; GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ddnsuser;"
+
             cd server && npm install && npm run build
             cd ../dashboard && npm install && npx vite build
             pm2 restart ddns-api

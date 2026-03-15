@@ -920,6 +920,35 @@ pm2 save
 pm2 startup    # follow the printed command to enable on boot
 ```
 
+### Database migrations
+
+Migration files live in `db/migrations/` and are numbered sequentially (e.g. `001_create_users.sql`, `014_create_uptime_checks.sql`). All migrations use `IF NOT EXISTS` / `IF NOT FOUND` so they're safe to re-run.
+
+**Running migrations manually:**
+
+```bash
+# Run a single migration
+sudo -u postgres psql -p 5433 ddns -f db/migrations/014_create_uptime_checks.sql
+
+# IMPORTANT: Grant permissions to the app user after creating tables
+sudo -u postgres psql -p 5433 ddns -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO ddnsuser; GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ddnsuser;"
+```
+
+**Why permissions matter:** The app connects to PostgreSQL as `ddnsuser`, but migrations are often run as `postgres` (superuser). Without an explicit `GRANT`, the app gets "permission denied" errors on new tables.
+
+**One-time fix to prevent future permission issues:**
+
+```bash
+sudo -u postgres psql -p 5433 ddns -c "
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ddnsuser;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ddnsuser;
+"
+```
+
+This ensures any tables created by `postgres` in the future are automatically accessible by `ddnsuser`.
+
+**CI/CD pipeline:** The GitHub Actions deploy workflow (`deploy.yml`) automatically runs all migrations and grants permissions on every deploy, so manual steps are only needed for first-time setup or hotfixes.
+
 ### Automated database backups
 
 ```bash
