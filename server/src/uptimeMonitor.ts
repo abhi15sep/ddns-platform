@@ -46,7 +46,7 @@ async function sendAlertEmail(newStatus: ServiceStatus, results: CheckResult[]) 
   if (!config.SMTP_HOST || !config.SMTP_USER) return;
   try {
     // Get admin emails
-    const adminResult = await pool.query("SELECT email FROM users WHERE role = 'admin' LIMIT 5");
+    const adminResult = await pool.query("SELECT email FROM users WHERE is_admin = TRUE LIMIT 5");
     if (adminResult.rows.length === 0) return;
 
     const { default: nodemailer } = await import('nodemailer');
