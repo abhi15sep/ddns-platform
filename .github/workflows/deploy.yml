@@ -45,8 +45,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install all dependencies (workspaces)
-        run: npm install
+      - name: Install client dependencies (skip workspaces)
+        run: |
+          rm -f package.json package-lock.json
+          cd client-app && npm install
       - name: Build Linux binaries
         run: cd client-app && npx electron-builder --linux deb AppImage --x64
       - name: Build Windows binary
@@ -72,8 +74,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install all dependencies (workspaces)
-        run: npm install
+      - name: Install client dependencies (skip workspaces)
+        run: |
+          rm -f package.json package-lock.json
+          cd client-app && npm install
       - name: Build macOS binaries (x64 + arm64)
         run: cd client-app && npx electron-builder --mac dmg --x64 --arm64
       - name: Upload artifacts
