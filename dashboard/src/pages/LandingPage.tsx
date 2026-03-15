@@ -1,4 +1,4 @@
-import { useEffect, useState, CSSProperties } from 'react';
+import { useEffect, useState, useCallback, CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { ThemeToggleButton } from '../App';
 
@@ -130,6 +130,39 @@ function Free() {
   return <span style={{ color: 'var(--badge-active-text)', fontWeight: 700 }}>Free</span>;
 }
 
+/* ---------- uptime badge ---------- */
+function UptimeBadge() {
+  const [uptime, setUptime] = useState<{ status: string; pct: number } | null>(null);
+
+  const fetchUptime = useCallback(async () => {
+    try {
+      const res = await fetch('/health/uptime', { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const data = await res.json();
+        const pct = data.uptime?.['30d'] || 0;
+        setUptime({ status: data.status || 'unknown', pct });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchUptime(); }, [fetchUptime]);
+
+  if (!uptime || uptime.pct === 0) return null;
+
+  const isOk = uptime.status === 'ok';
+  const dotColor = isOk ? '#34d399' : uptime.status === 'degraded' ? '#fbbf24' : '#f87171';
+
+  return (
+    <Link to="/status" style={styles.uptimeBadge}>
+      <span style={{ ...styles.uptimeDot, background: dotColor, boxShadow: `0 0 6px ${dotColor}` }} />
+      <span style={styles.uptimeText}>
+        {isOk ? 'All Systems Operational' : uptime.status === 'degraded' ? 'Partial Degradation' : 'Service Issues'}
+      </span>
+      <span style={styles.uptimePct}>{uptime.pct}% uptime (30d)</span>
+    </Link>
+  );
+}
+
 /* ---------- main component ---------- */
 export default function LandingPage() {
   return (
@@ -160,6 +193,7 @@ export default function LandingPage() {
               Free, open-source Dynamic DNS that keeps your domains pointed at your
               changing IP address. No monthly confirmations. No limits. No catch.
             </p>
+            <UptimeBadge />
             <div style={styles.heroCtas}>
               <Link to="/register" style={styles.ctaPrimary}>Get Started Free</Link>
               <a href="#how-it-works" style={styles.ctaSecondary}>Learn More &darr;</a>
@@ -319,6 +353,7 @@ export default function LandingPage() {
             <div style={styles.footerCol}>
               <h4 style={styles.footerColTitle}>Resources</h4>
               <Link to="/downloads" style={styles.footerLink}>Downloads</Link>
+              <Link to="/status" style={styles.footerLink}>Status</Link>
               <a href="https://github.com/devops-monk/ddns" target="_blank" rel="noreferrer" style={styles.footerLink}>GitHub</a>
             </div>
           </div>
@@ -424,6 +459,36 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.7,
     marginBottom: '2rem',
     maxWidth: 540,
+  },
+  uptimeBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    background: 'rgba(255,255,255,0.12)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    padding: '0.4rem 1rem',
+    marginBottom: '1.25rem',
+    textDecoration: 'none',
+    transition: 'background 0.2s',
+    cursor: 'pointer',
+  },
+  uptimeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    display: 'inline-block',
+    flexShrink: 0,
+  },
+  uptimeText: {
+    color: '#ffffff',
+    fontSize: '0.82rem',
+    fontWeight: 600,
+  },
+  uptimePct: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: '0.78rem',
+    fontWeight: 500,
   },
   heroCtas: {
     display: 'flex',

@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { pool } from './db.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import healthRouter from './routes/health.js';
+import { startUptimeMonitor } from './uptimeMonitor.js';
 import authRouter from './routes/auth.js';
 import updateRouter from './routes/update.js';
 import domainsRouter from './routes/domains.js';
@@ -59,6 +60,7 @@ app.use(errorHandler);
 const port = Number(config.PORT);
 app.listen(port, () => {
   console.log(`DDNS API running on port ${port}`);
+  startUptimeMonitor();
 });
 
 export default app;

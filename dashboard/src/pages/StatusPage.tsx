@@ -25,6 +25,8 @@ export default function StatusPage() {
   ]);
   const [lastChecked, setLastChecked] = useState<string>('--');
   const [overallStatus, setOverallStatus] = useState<CheckStatus>('checking');
+  const [uptimeData, setUptimeData] = useState<{ '7d': number; '30d': number; '90d': number } | null>(null);
+  const [incidents24h, setIncidents24h] = useState<number>(0);
 
   useEffect(() => {
     if (user) checkAdmin().then(() => setIsAdmin(true)).catch(() => {});
@@ -106,11 +108,23 @@ export default function StatusPage() {
     else setOverallStatus('degraded');
   }, []);
 
+  const fetchUptimeStats = useCallback(async () => {
+    try {
+      const res = await fetch('/health/uptime');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.uptime) setUptimeData(data.uptime);
+        setIncidents24h(data.incidents_24h || 0);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     runChecks();
-    const interval = setInterval(runChecks, 60000);
+    fetchUptimeStats();
+    const interval = setInterval(() => { runChecks(); fetchUptimeStats(); }, 60000);
     return () => clearInterval(interval);
-  }, [runChecks]);
+  }, [runChecks, fetchUptimeStats]);
 
   async function handleLogout() {
     await logout();
@@ -277,6 +291,47 @@ export default function StatusPage() {
             Refresh
           </button>
         </div>
+
+        {/* Uptime History */}
+        {uptimeData && (uptimeData['7d'] > 0 || uptimeData['30d'] > 0 || uptimeData['90d'] > 0) && (
+          <>
+            <div className="section-label">Uptime History</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              {([['7d', '7 Days'], ['30d', '30 Days'], ['90d', '90 Days']] as const).map(([key, label]) => {
+                const pct = uptimeData[key] || 0;
+                const color = pct >= 99.5 ? 'var(--badge-active-text)' : pct >= 95 ? 'var(--badge-stale-text)' : 'var(--badge-never-text)';
+                const bg = pct >= 99.5 ? 'var(--badge-active-bg)' : pct >= 95 ? 'var(--badge-stale-bg)' : 'var(--badge-never-bg)';
+                return (
+                  <div key={key} className="info-card" style={{ textAlign: 'center', padding: '1.25rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>{label}</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color, marginBottom: '0.25rem' }}>{pct > 0 ? `${pct}%` : '--'}</div>
+                    <div style={{ display: 'inline-block', background: bg, color, padding: '0.15rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600 }}>
+                      {pct >= 99.5 ? 'Excellent' : pct >= 95 ? 'Good' : pct > 0 ? 'Needs Attention' : 'No Data'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Uptime bar visualization */}
+            <div className="info-card" style={{ padding: '1.25rem', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-heading)' }}>Last 30 Days</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {incidents24h > 0 ? `${incidents24h} incident hour${incidents24h > 1 ? 's' : ''} in last 24h` : 'No incidents in last 24h'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', background: 'var(--bg-secondary)' }}>
+                <div style={{
+                  width: `${uptimeData['30d'] || 0}%`,
+                  background: (uptimeData['30d'] || 0) >= 99.5 ? 'var(--badge-active-text)' : (uptimeData['30d'] || 0) >= 95 ? 'var(--badge-stale-text)' : 'var(--badge-never-text)',
+                  borderRadius: '4px',
+                  transition: 'width 0.5s ease',
+                }} />
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Info cards */}
         <div className="section-label">Service Information</div>

@@ -74,6 +74,9 @@ export const disable2FA = (password: string) => api.post('/auth/2fa/disable', { 
 export const verify2FA = (temp_token: string, code: string) =>
   api.post('/auth/verify-2fa', { temp_token, code });
 
+// Uptime
+export const getUptimeStats = () => api.get('/health/uptime');
+
 // Admin
 export const checkAdmin = () => api.get('/api/admin/check');
 export const getAdminStats = () => api.get('/api/admin/stats');

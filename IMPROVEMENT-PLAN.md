@@ -436,12 +436,14 @@ Let users choose record type per domain.
 - Domain list: record type badge on each domain card
 - API docs updated with new endpoint
 
-### 5.10 Uptime Monitoring (LOW)
-External monitoring for the platform itself.
-- UptimeRobot or similar free service pinging `/health` every 5 min
-- Public status badge on landing page
-- Alert admin via email/Telegram if service goes down
-- Historical uptime percentage display on Status page
+### 5.10 Uptime Monitoring (LOW) — DONE
+Internal uptime monitoring with historical tracking.
+- `db/migrations/014_create_uptime_checks.sql` — Stores check results per service (api, database, dns)
+- `server/src/uptimeMonitor.ts` — Runs every 5 minutes: checks DB connectivity, PowerDNS API, logs results, emails admin on status change
+- `server/src/routes/health.ts` — `GET /health/uptime` returns 7d/30d/90d uptime percentages, current status, incident count
+- `dashboard/src/pages/StatusPage.tsx` — Uptime History section with percentage cards (7d/30d/90d), progress bar, incident counter
+- `dashboard/src/pages/LandingPage.tsx` — Live status badge in hero section linking to /status page, Status link in footer
+- Auto-cleanup of checks older than 90 days
 
 ### 5.11 PM2 Log Rotation (LOW)
 Prevent disk fill from growing logs.
@@ -475,10 +477,10 @@ i18n for broader audience.
 | 22 | Lazy loading / code splitting (React.lazy) | 0.5 day | **DONE** |
 | 23 | Automated database backups (cron + pg_dump) | 0.5 day | TODO |
 | 24 | CI/CD with GitHub Actions (lint, build, deploy) | 1 day | **DONE** |
-| 25 | Data export / GDPR compliance | 0.5 day | TODO |
-| 26 | Session management (active sessions, logout all) | 1 day | TODO |
-| 27 | IPv6 per-domain toggle (A/AAAA/Both) | 0.5 day | TODO |
-| 28 | Uptime monitoring (external + status badge) | 0.5 day | TODO |
+| 25 | Data export / GDPR compliance | 0.5 day | **DONE** |
+| 26 | Session management (active sessions, logout all) | 1 day | **DONE** |
+| 27 | IPv6 per-domain toggle (A/AAAA/Both) | 0.5 day | **DONE** |
+| 28 | Uptime monitoring (internal + status badge) | 0.5 day | **DONE** |
 | 29 | PM2 log rotation | 15 min | TODO |
 | 30 | Domain sharing / teams | 1.5 days | TODO |
 | 31 | Multi-language support (i18n) | 1 day | TODO |
