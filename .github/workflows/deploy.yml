@@ -45,6 +45,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Install Wine for Windows cross-compilation
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y wine64
       - name: Install client dependencies (skip workspaces)
         run: |
           rm -f package.json package-lock.json
