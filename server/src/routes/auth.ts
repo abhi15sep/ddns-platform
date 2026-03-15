@@ -164,8 +164,15 @@ router.post('/verify-2fa', authLimiter, async (req: Request, res: Response) => {
     }
 
     res.status(401).json({ error: 'Invalid code. Try again.' });
-  } catch {
-    res.status(401).json({ error: 'Token expired. Please log in again.' });
+  } catch (err: any) {
+    console.error('2FA verification error:', err?.message || err);
+    if (err?.name === 'TokenExpiredError') {
+      res.status(401).json({ error: 'Token expired. Please log in again.' });
+    } else if (err?.name === 'JsonWebTokenError') {
+      res.status(401).json({ error: 'Invalid token. Please log in again.' });
+    } else {
+      res.status(500).json({ error: 'Verification failed. Please try again.' });
+    }
   }
 });
 
