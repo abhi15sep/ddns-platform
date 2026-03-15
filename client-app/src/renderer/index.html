@@ -709,9 +709,13 @@
       domains.splice(index, 1);
       await window.ddns.setConfig('domains', domains);
 
+      // Clear activity log entries for removed domain
+      activityLog = activityLog.filter(e => !e.message.includes(name + ':') && !e.message.includes(name + ' '));
+      renderActivityLog();
+
       const status = await window.ddns.getStatus();
       updateStatusDisplay(status);
-      addActivityEntry('err', `Removed ${name}`);
+      addActivityEntry('ok', `Removed ${name}`);
     }
 
     // ---- Settings ----

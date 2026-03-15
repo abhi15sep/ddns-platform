@@ -35,12 +35,92 @@ jobs:
       - run: cd dashboard && npm run lint
       - run: cd dashboard && npm run build
 
+  # Build Electron client for Linux + Windows (runs on ubuntu)
+  build-client-linux-win:
+    name: Client — Linux & Windows
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: cd client-app && npm install
+      - name: Build Linux binaries
+        run: cd client-app && npx electron-builder --linux deb AppImage --x64
+      - name: Build Windows binary
+        run: cd client-app && npx electron-builder --win nsis --x64
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-linux-win
+          path: |
+            client-app/out/*.deb
+            client-app/out/*.AppImage
+            client-app/out/*.exe
+          if-no-files-found: warn
+          retention-days: 5
+
+  # Build Electron client for macOS (needs macos runner)
+  build-client-mac:
+    name: Client — macOS
+    runs-on: macos-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: cd client-app && npm install
+      - name: Build macOS binaries (x64 + arm64)
+        run: cd client-app && npx electron-builder --mac dmg --x64 --arm64
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-mac
+          path: client-app/out/*.dmg
+          if-no-files-found: warn
+          retention-days: 5
+
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    needs: [typecheck-server, typecheck-dashboard]
+    needs: [typecheck-server, typecheck-dashboard, build-client-linux-win, build-client-mac]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      # Download all client artifacts
+      - name: Download Linux & Windows binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: client-linux-win
+          path: binaries
+        continue-on-error: true
+
+      - name: Download macOS binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: client-mac
+          path: binaries
+        continue-on-error: true
+
+      - name: List binaries
+        run: ls -lh binaries/ 2>/dev/null || echo "No binaries found"
+
+      # Upload binaries to VPS
+      - name: Upload binaries to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "binaries/*"
+          target: /opt/ddns-platform/client-app/out/
+          strip_components: 1
+        continue-on-error: true
+
+      # Deploy server + dashboard
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -52,9 +132,9 @@ jobs:
             cd /opt/ddns-platform
             git fetch origin main
             git reset --hard origin/main
-            git clean -fd --exclude=.env
+            git clean -fd --exclude=.env --exclude=client-app/out
 
-            # Run any new migrations as ddnsuser (not postgres) to avoid permission issues
+            # Run any new migrations
             for f in db/migrations/*.sql; do
               sudo -u postgres psql -p 5433 ddns -f "$f" 2>/dev/null || true
             done
@@ -64,3 +144,7 @@ jobs:
             cd server && npm install && npm run build
             cd ../dashboard && npm install && npx vite build
             pm2 restart ddns-api
+
+            # Show deployed binaries
+            echo "--- Download files available ---"
+            ls -lh /opt/ddns-platform/client-app/out/*.dmg /opt/ddns-platform/client-app/out/*.exe /opt/ddns-platform/client-app/out/*.deb /opt/ddns-platform/client-app/out/*.AppImage 2>/dev/null || echo "No binaries found"

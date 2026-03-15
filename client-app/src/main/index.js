@@ -158,6 +158,19 @@ ipcMain.handle('set-config', (_event, key, value) => {
   }
 
   if (key === 'updateInterval' || key === 'domains' || key === 'serverUrl') {
+    // Clean up statuses for removed domains
+    if (key === 'domains') {
+      const currentDomains = new Set(value.map(d => d.subdomain));
+      const statuses = store.get('domainStatuses') || {};
+      for (const sub of Object.keys(statuses)) {
+        if (!currentDomains.has(sub)) {
+          delete statuses[sub];
+        }
+      }
+      store.set('domainStatuses', statuses);
+      store.set('lastError', null);
+    }
+
     stopUpdater();
     if (store.get('serverUrl') && store.get('domains').length > 0) {
       startUpdater(store, onUpdateResult);
