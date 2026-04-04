@@ -11,9 +11,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+      client: ${{ steps.filter.outputs.client }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'server/**'
+              - 'db/**'
+            dashboard:
+              - 'dashboard/**'
+            client:
+              - 'client-app/**'
+
   typecheck-server:
     name: Server — Typecheck & Build
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +49,8 @@ jobs:
   typecheck-dashboard:
     name: Dashboard — Typecheck & Build
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.dashboard == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,7 +64,8 @@ jobs:
   build-client-linux-win:
     name: Client — Linux & Windows
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: changes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.client == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -73,7 +99,8 @@ jobs:
   build-client-mac:
     name: Client — macOS
     runs-on: macos-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: changes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.client == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -96,11 +123,19 @@ jobs:
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    needs: [typecheck-server, typecheck-dashboard, build-client-linux-win, build-client-mac]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, typecheck-server, typecheck-dashboard, build-client-linux-win, build-client-mac]
+    if: |
+      always() &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      (needs.typecheck-server.result == 'success' || needs.typecheck-server.result == 'skipped') &&
+      (needs.typecheck-dashboard.result == 'success' || needs.typecheck-dashboard.result == 'skipped') &&
+      (needs.build-client-linux-win.result == 'success' || needs.build-client-linux-win.result == 'skipped') &&
+      (needs.build-client-mac.result == 'success' || needs.build-client-mac.result == 'skipped') &&
+      !(needs.typecheck-server.result == 'failure' || needs.typecheck-dashboard.result == 'failure' || needs.build-client-linux-win.result == 'failure' || needs.build-client-mac.result == 'failure')
     steps:
-      # Download all client artifacts
+      # Download client artifacts (only exist if client was rebuilt)
       - name: Download Linux & Windows binaries
+        if: needs.changes.outputs.client == 'true'
         uses: actions/download-artifact@v4
         with:
           name: client-linux-win
@@ -108,6 +143,7 @@ jobs:
         continue-on-error: true
 
       - name: Download macOS binaries
+        if: needs.changes.outputs.client == 'true'
         uses: actions/download-artifact@v4
         with:
           name: client-mac
@@ -115,10 +151,12 @@ jobs:
         continue-on-error: true
 
       - name: List binaries
+        if: needs.changes.outputs.client == 'true'
         run: ls -lh binaries/ 2>/dev/null || echo "No binaries found"
 
-      # Upload binaries to VPS
+      # Upload binaries to VPS (only if client was rebuilt)
       - name: Upload binaries to VPS
+        if: needs.changes.outputs.client == 'true'
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
