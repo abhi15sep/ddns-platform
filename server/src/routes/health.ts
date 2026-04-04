@@ -25,7 +25,7 @@ router.get('/uptime', async (_req, res) => {
           r.days,
           uc.service,
           COUNT(*) AS total,
-          COUNT(*) FILTER (WHERE uc.status = 'ok') AS ok_count
+          COUNT(*) FILTER (WHERE uc.status IN ('ok', 'degraded')) AS ok_count
         FROM ranges r
         JOIN uptime_checks uc ON uc.checked_at >= NOW() - (r.days || ' days')::INTERVAL
         GROUP BY r.days, uc.service

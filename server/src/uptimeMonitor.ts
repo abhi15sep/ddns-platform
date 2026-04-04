@@ -29,7 +29,7 @@ async function checkDNS(): Promise<CheckResult> {
   const start = Date.now();
   try {
     const res = await fetch(
-      `${config.PDNS_API_URL}/api/v1/servers/localhost/zones/${config.DDNS_ZONE}.`,
+      `${config.PDNS_API_URL}/servers/localhost/zones/${config.DDNS_ZONE}`,
       { headers: { 'X-API-Key': config.PDNS_API_KEY }, signal: AbortSignal.timeout(10000) }
     );
     const latency = Date.now() - start;
