@@ -166,9 +166,10 @@ export default function DomainDetail() {
     time: new Date(h.updated_at).toLocaleString(),
   }));
 
+  const rangeLabel = historyRange === '3h' ? 'Last 3 hours' : historyRange === '24h' ? 'Last 24 hours' : historyRange === '7d' ? 'Last 7 days' : 'Last 30 days';
   const timeRange =
     history.length > 0
-      ? `Last hour · ${history.length} update${history.length !== 1 ? 's' : ''}`
+      ? `${rangeLabel} · ${history.length} update${history.length !== 1 ? 's' : ''}`
       : '';
 
   return (
@@ -448,7 +449,7 @@ export default function DomainDetail() {
                         <span key={ip} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === uniqueIPs.length - 1 ? 'var(--badge-active-text)' : 'var(--text-muted)', display: 'inline-block' }} />
                           {ip}
-                          {i === uniqueIPs.length - 1 && <span style={{ color: 'var(--badge-active-text)', fontWeight: 600 }}>(current)</span>}
+                          {ip === domain.current_ip && <span style={{ color: 'var(--badge-active-text)', fontWeight: 600 }}>(current)</span>}
                         </span>
                       ))}
                     </div>
