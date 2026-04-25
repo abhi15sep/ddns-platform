@@ -447,7 +447,7 @@ export default function DomainDetail() {
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
                       {uniqueIPs.map((ip, i) => (
                         <span key={ip} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === uniqueIPs.length - 1 ? 'var(--badge-active-text)' : 'var(--text-muted)', display: 'inline-block' }} />
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: ip === domain.current_ip ? 'var(--badge-active-text)' : 'var(--text-muted)', display: 'inline-block' }} />
                           {ip}
                           {ip === domain.current_ip && <span style={{ color: 'var(--badge-active-text)', fontWeight: 600 }}>(current)</span>}
                         </span>
