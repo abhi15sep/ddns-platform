@@ -126,6 +126,9 @@ function Check() {
 function Cross() {
   return <span style={{ color: 'var(--badge-never-text)', fontWeight: 700, fontSize: '1.1rem' }}>No</span>;
 }
+function GoodNo() {
+  return <span style={{ color: 'var(--badge-active-text)', fontWeight: 700, fontSize: '1.1rem' }}>No</span>;
+}
 function Free() {
   return <span style={{ color: 'var(--badge-active-text)', fontWeight: 700 }}>Free</span>;
 }
@@ -281,7 +284,7 @@ export default function LandingPage() {
                 {([
                   ['Price', <Free key="f1" />, <Free key="f2" />, <Free key="f3" />],
                   ['Domain Limit', '5 subdomains', '1 hostname', '5 subdomains'],
-                  ['Monthly Confirmation', <Cross key="c1" />, <span key="s1" style={{ color: 'var(--badge-never-text)', fontWeight: 700 }}>Required</span>, <Cross key="c2" />],
+                  ['Monthly Confirmation', <GoodNo key="c1" />, <span key="s1" style={{ color: 'var(--badge-never-text)', fontWeight: 700 }}>Required</span>, <GoodNo key="c2" />],
                   ['IP Change History', <Cross key="c3" />, <Cross key="c4" />, <Check key="k1" />],
                   ['Desktop App', <Cross key="c5" />, <Check key="k2" />, <Check key="k3" />],
                   ['Open Source', <Check key="k4" />, <Cross key="c6" />, <Check key="k5" />],
