@@ -60,7 +60,7 @@ sudo apt install -y build-essential python3
 sudo npm install -g pm2
 ```
 
-### Nginx + Certbot (skip if Nginx is already installed from gift site)
+### Nginx + Certbot
 
 ```bash
 sudo apt install -y nginx certbot python3-certbot-nginx
@@ -158,15 +158,13 @@ npm run build
 cd ..
 ```
 
-## Step 6: Add Nginx Config (does NOT touch existing gift site config)
-
-> Your VPS already uses Nginx for `gift.devops-monk.com`. We add a separate config file.
+## Step 6: Add Nginx Config
 
 ```bash
 cp /opt/ddns-platform/dns/nginx-ddns.conf /etc/nginx/sites-available/ddns
 ln -s /etc/nginx/sites-available/ddns /etc/nginx/sites-enabled/ddns
 
-# Test config (checks ALL sites including gift)
+# Test config
 nginx -t
 
 # If test passes, reload
