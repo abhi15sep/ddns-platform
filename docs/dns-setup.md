@@ -4,12 +4,12 @@ How to install and configure PowerDNS as the authoritative DNS server for your D
 
 ## Overview
 
-PowerDNS serves as the authoritative nameserver for your DDNS zone (e.g., `dyn.devops-monk.com`). When someone queries `myhome.dyn.devops-monk.com`, PowerDNS returns the IP address stored in its MySQL database. The Node.js backend updates these records via the PowerDNS REST API.
+PowerDNS serves as the authoritative nameserver for your DDNS zone (e.g., `ddns.devops-monk.com`). When someone queries `myhome.ddns.devops-monk.com`, PowerDNS returns the IP address stored in its MySQL database. The Node.js backend updates these records via the PowerDNS REST API.
 
 ```
 Internet resolver
     │
-    ▼  "What is myhome.dyn.devops-monk.com?"
+    ▼  "What is myhome.ddns.devops-monk.com?"
 Registrar NS delegation
     │
     ▼  "Ask ns1.devops-monk.com"
@@ -101,16 +101,16 @@ mysql -u pdns -p powerdns
 
 ```sql
 -- Create the zone
-INSERT INTO domains (name, type) VALUES ('dyn.devops-monk.com', 'NATIVE');
+INSERT INTO domains (name, type) VALUES ('ddns.devops-monk.com', 'NATIVE');
 
 -- Get the zone ID
-SET @did = (SELECT id FROM domains WHERE name='dyn.devops-monk.com');
+SET @did = (SELECT id FROM domains WHERE name='ddns.devops-monk.com');
 
 -- Add required SOA and NS records
 INSERT INTO records (domain_id, name, type, content, ttl) VALUES
-  (@did, 'dyn.devops-monk.com', 'SOA',
+  (@did, 'ddns.devops-monk.com', 'SOA',
     'ns1.devops-monk.com. hostmaster.devops-monk.com. 1 3600 600 604800 300', 300),
-  (@did, 'dyn.devops-monk.com', 'NS', 'ns1.devops-monk.com', 300);
+  (@did, 'ddns.devops-monk.com', 'NS', 'ns1.devops-monk.com', 300);
 ```
 
 Replace `devops-monk.com` with your actual domain everywhere.
@@ -124,14 +124,15 @@ mysql -u pdns -p powerdns < dns/init-zone.sql
 
 Go to Porkbun DNS management for `devops-monk.com` and add these records:
 
-| Record Type | Host | Answer |
-|-------------|------|--------|
-| A | `ns1` | `YOUR_HOSTINGER_VPS_IP` |
-| NS | `dyn` | `ns1.devops-monk.com` |
-| A | `ddns` | `YOUR_HOSTINGER_VPS_IP` |
-| A | `api` | `YOUR_HOSTINGER_VPS_IP` |
+| Record Type | Host    | Answer                |
+|-------------|---------|-----------------------|
+| A           | `ns1`   | `YOUR_VPS_IP`         |
+| NS          | `ddns`  | `ns1.devops-monk.com` |
+| CNAME       | `api`   | `YOUR_VPS_HOSTNAME`   |
 
-This tells the internet: "For anything under `dyn.devops-monk.com`, ask `ns1.devops-monk.com` (which is your Hostinger VPS)."
+**Do NOT add a CNAME for `ddns`** — the NS record on `ddns` already makes your VPS authoritative for that entire label. PowerDNS serves the apex A record (dashboard) and all user subdomains from within the `ddns.devops-monk.com` zone.
+
+This tells the internet: "For anything under `ddns.devops-monk.com`, ask `ns1.devops-monk.com` (your VPS). That includes the dashboard at `ddns.devops-monk.com` itself and all user subdomains like `homelab.ddns.devops-monk.com`."
 
 ### Porkbun steps
 
@@ -151,10 +152,10 @@ systemctl enable pdns
 systemctl status pdns
 
 # Test locally
-dig @127.0.0.1 dyn.devops-monk.com SOA
+dig @127.0.0.1 ddns.devops-monk.com SOA
 
 # Test from the internet (after DNS propagation, may take up to 48 hours)
-dig @YOUR_VPS_IP dyn.devops-monk.com SOA
+dig @YOUR_VPS_IP ddns.devops-monk.com SOA
 ```
 
 ### Test the API
@@ -164,17 +165,17 @@ dig @YOUR_VPS_IP dyn.devops-monk.com SOA
 curl -s -H "X-API-Key: YOUR_API_KEY" http://127.0.0.1:8081/api/v1/servers/localhost/zones
 
 # Get zone details
-curl -s -H "X-API-Key: YOUR_API_KEY" http://127.0.0.1:8081/api/v1/servers/localhost/zones/dyn.devops-monk.com
+curl -s -H "X-API-Key: YOUR_API_KEY" http://127.0.0.1:8081/api/v1/servers/localhost/zones/ddns.devops-monk.com
 
 # Create a test record
 curl -s -X PATCH \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"rrsets":[{"name":"test.dyn.devops-monk.com.","type":"A","ttl":60,"changetype":"REPLACE","records":[{"content":"1.2.3.4","disabled":false}]}]}' \
-  http://127.0.0.1:8081/api/v1/servers/localhost/zones/dyn.devops-monk.com
+  -d '{"rrsets":[{"name":"test.ddns.devops-monk.com.","type":"A","ttl":60,"changetype":"REPLACE","records":[{"content":"1.2.3.4","disabled":false}]}]}' \
+  http://127.0.0.1:8081/api/v1/servers/localhost/zones/ddns.devops-monk.com
 
 # Verify the test record
-dig @127.0.0.1 test.dyn.devops-monk.com A
+dig @127.0.0.1 test.ddns.devops-monk.com A
 ```
 
 ## Troubleshooting
@@ -198,7 +199,7 @@ systemctl disable systemd-resolved
 - Wait for NS delegation to propagate (up to 48 hours)
 - Verify the A record for `ns1.devops-monk.com` points to your VPS IP
 - Check firewall: `ufw allow 53/tcp && ufw allow 53/udp`
-- Test directly: `dig @YOUR_VPS_IP dyn.devops-monk.com SOA`
+- Test directly: `dig @YOUR_VPS_IP ddns.devops-monk.com SOA`
 
 ## Docker (Development)
 

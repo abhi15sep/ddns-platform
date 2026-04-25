@@ -17,7 +17,7 @@ Your Computer                    DDNS Server                  Internet
     │   (api.ipify.org)              │                            │
     │                                │                            │
     ├── IP changed? ─── Yes ───────► │ Update DNS record          │
-    │                                │ homelab.dyn.devops-monk.com│
+    │                                │ homelab.ddns.devops-monk.com│
     │                                │      → 154.51.103.111      │
     │                                │                            │
     │   Sleep 5 minutes...           │                            │
@@ -279,7 +279,7 @@ crontab -e
 
 ### IP updates but DNS doesn't resolve
 - Wait 60 seconds (DNS TTL)
-- Check: `nslookup SUBDOMAIN.dyn.devops-monk.com`
+- Check: `nslookup SUBDOMAIN.ddns.devops-monk.com`
 - If still failing, check the server status at `https://ddns.devops-monk.com`
 
 ### App doesn't start on boot

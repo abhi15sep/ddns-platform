@@ -130,7 +130,7 @@ export default function HowItWorksPage() {
           <h2 style={styles.sectionTitle}>The Solution: Dynamic DNS</h2>
           <p style={styles.sectionDesc}>
             Instead of remembering an IP address that changes, you use a <strong>domain name</strong> like{' '}
-            <code style={styles.code}>myhome.dyn.devops-monk.com</code>. A small script on your home network
+            <code style={styles.code}>myhome.ddns.devops-monk.com</code>. A small script on your home network
             tells our server whenever your IP changes, and we update the DNS record automatically.
           </p>
         </section>
@@ -199,7 +199,7 @@ export default function HowItWorksPage() {
               <div style={styles.flowContent}>
                 <h3 style={styles.flowTitle}>Our server updates the DNS record</h3>
                 <p style={styles.flowDesc}>
-                  We tell the DNS system: <code style={styles.code}>myhome.dyn.devops-monk.com</code> now points to <code style={styles.code}>98.51.100.42</code>
+                  We tell the DNS system: <code style={styles.code}>myhome.ddns.devops-monk.com</code> now points to <code style={styles.code}>98.51.100.42</code>
                 </p>
               </div>
               <div style={styles.flowDiagram}>
@@ -252,7 +252,7 @@ export default function HowItWorksPage() {
               <div style={styles.flowContent}>
                 <h3 style={styles.flowTitle}>Access your home from anywhere</h3>
                 <p style={styles.flowDesc}>
-                  From work, a coffee shop, or your phone — just use <code style={styles.code}>myhome.dyn.devops-monk.com</code> and
+                  From work, a coffee shop, or your phone — just use <code style={styles.code}>myhome.ddns.devops-monk.com</code> and
                   it always reaches your home, no matter what your current IP is.
                 </p>
               </div>
@@ -366,7 +366,7 @@ export default function HowItWorksPage() {
               {/* Result banner */}
               <rect x="180" y="380" width="540" height="36" rx="18" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1.5" />
               <text x="450" y="403" textAnchor="middle" fill="#065f46" fontSize="12" fontWeight="600" fontFamily="system-ui">
-                Result: myhome.dyn.devops-monk.com always reaches your home!
+                Result: myhome.ddns.devops-monk.com always reaches your home!
               </text>
             </svg>
           </div>
@@ -408,7 +408,7 @@ export default function HowItWorksPage() {
               <div style={styles.quickStepNum}>2</div>
               <div>
                 <strong>Add a subdomain</strong>
-                <p style={styles.quickStepDesc}>Pick a name like "myhome" — you'll get myhome.dyn.devops-monk.com</p>
+                <p style={styles.quickStepDesc}>Pick a name like "myhome" — you'll get myhome.ddns.devops-monk.com</p>
               </div>
             </div>
             <div style={styles.quickStep}>
@@ -450,7 +450,7 @@ export default function HowItWorksPage() {
               <text x="40" y="80" fill="#4338ca" fontSize="11" fontFamily="system-ui">Translates a name into your current IP</text>
 
               <rect x="50" y="92" width="200" height="28" rx="6" fill="white" stroke="#c7d2fe" strokeWidth="1" />
-              <text x="150" y="111" textAnchor="middle" fill="#4338ca" fontSize="11" fontWeight="600" fontFamily="monospace">myhome.dyn.devops-monk.com</text>
+              <text x="150" y="111" textAnchor="middle" fill="#4338ca" fontSize="11" fontWeight="600" fontFamily="monospace">myhome.ddns.devops-monk.com</text>
 
               <line x1="260" y1="106" x2="340" y2="106" stroke="#4f46e5" strokeWidth="2" markerEnd="url(#pfArrow)" />
               <text x="300" y="98" textAnchor="middle" fill="#4f46e5" fontSize="9" fontFamily="system-ui">resolves to</text>

@@ -420,7 +420,7 @@ export default function AdminPage() {
                     {activity.map((a) => (
                       <tr key={a.domain} style={a.user_blocked ? { opacity: 0.6 } : undefined}>
                         <td style={{ fontFamily: "'SF Mono', 'Fira Code', monospace", fontSize: '0.8rem' }}>
-                          {a.domain}.dyn.devops-monk.com
+                          {a.domain}.ddns.devops-monk.com
                         </td>
                         <td style={{ fontSize: '0.85rem' }}>{a.owner_email}</td>
                         <td>

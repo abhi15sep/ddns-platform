@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendIPChangeEmail(to: string, domain: string, oldIP: string, newIP: string) {
   const timestamp = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-  const fqdn = `${domain}.dyn.devops-monk.com`;
+  const fqdn = `${domain}.ddns.devops-monk.com`;
   await transporter.sendMail({
     from: config.SMTP_FROM,
     to,

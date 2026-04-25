@@ -124,7 +124,7 @@ NODE_ENV=production
 DATABASE_URL=postgresql://ddnsuser:STRONG_PG_PASSWORD@localhost:5432/ddns
 PDNS_API_URL=http://127.0.0.1:8081/api/v1
 PDNS_API_KEY=your-powerdns-api-key
-DDNS_ZONE=dyn.devops-monk.com
+DDNS_ZONE=ddns.devops-monk.com
 JWT_SECRET=$(openssl rand -hex 32)
 APP_URL=https://ddns.devops-monk.com
 API_URL=https://api.devops-monk.com
@@ -245,7 +245,7 @@ sudo chmod +x /etc/cron.daily/ddns-backup
 
 ```bash
 # 1. Check PowerDNS
-dig @localhost dyn.devops-monk.com SOA
+dig @localhost ddns.devops-monk.com SOA
 
 # 2. Check backend API
 curl https://api.devops-monk.com/health
@@ -257,7 +257,7 @@ curl -I https://devops-monk.com
 curl "https://api.devops-monk.com/update?domain=test&token=YOUR_TOKEN"
 
 # 5. Verify DNS resolution
-dig test.dyn.devops-monk.com
+dig test.ddns.devops-monk.com
 ```
 
 ## Updating the Application
@@ -299,7 +299,7 @@ pm2 monit                     # Real-time dashboard
 |-------|-------|
 | Dashboard shows blank page | `ls /opt/ddns-platform/dashboard/dist/` — did `npm run build` succeed? |
 | API returns 502 | `pm2 logs ddns-api` — is the server running? |
-| DNS not resolving | `dig @YOUR_VPS_IP dyn.devops-monk.com SOA` — is PowerDNS running? |
+| DNS not resolving | `dig @YOUR_VPS_IP ddns.devops-monk.com SOA` — is PowerDNS running? |
 | HTTPS not working | `sudo nginx -t` and check `tail -50 /var/log/nginx/error.log` |
 | OAuth redirect fails | Check `APP_URL` and `API_URL` in `.env` match your actual domain |
 | Database connection error | `sudo systemctl status postgresql` |

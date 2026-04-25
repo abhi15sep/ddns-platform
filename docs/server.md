@@ -103,7 +103,7 @@ pm2 start dist/app.js --name ddns-api
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `PDNS_API_URL` | Yes | PowerDNS REST API base URL |
 | `PDNS_API_KEY` | Yes | PowerDNS API key |
-| `DDNS_ZONE` | Yes | DNS zone name (e.g., `dyn.devops-monk.com`) |
+| `DDNS_ZONE` | Yes | DNS zone name (e.g., `ddns.devops-monk.com`) |
 | `JWT_SECRET` | Yes | Secret for signing JWTs (min 16 chars) |
 | `APP_URL` | No | Frontend URL for OAuth redirects |
 | `API_URL` | No | Backend URL for OAuth callbacks |

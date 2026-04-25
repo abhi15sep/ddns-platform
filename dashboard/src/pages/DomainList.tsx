@@ -188,7 +188,7 @@ export default function DomainList() {
       const r = await createDomain(newSub.trim());
       setDomains((prev) => [r.data, ...prev]);
       setNewSub('');
-      addToast(`${r.data.subdomain}.dyn.devops-monk.com created!`, 'success');
+      addToast(`${r.data.subdomain}.ddns.devops-monk.com created!`, 'success');
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -405,7 +405,7 @@ export default function DomainList() {
                       onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                     />
                   </div>
-                  <span className="domain-suffix">.dyn.devops-monk.com</span>
+                  <span className="domain-suffix">.ddns.devops-monk.com</span>
                   <button onClick={handleCreate} className="btn btn-primary btn-lg">
                     Create
                   </button>
@@ -413,7 +413,7 @@ export default function DomainList() {
                 {newSub && (
                   <div className="create-preview">
                     Your domain will be:{' '}
-                    <strong>{newSub}.dyn.devops-monk.com</strong>
+                    <strong>{newSub}.ddns.devops-monk.com</strong>
                   </div>
                 )}
               </>
@@ -472,7 +472,7 @@ export default function DomainList() {
                     <div className="domain-card-info">
                       <div className="domain-card-name">
                         <Link to={`/domain/${d.subdomain}`}>
-                          {d.subdomain}.dyn.devops-monk.com
+                          {d.subdomain}.ddns.devops-monk.com
                         </Link>
                       </div>
                       <div className="domain-card-meta">

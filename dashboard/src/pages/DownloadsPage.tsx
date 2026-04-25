@@ -81,7 +81,7 @@ services:
   https://api.devops-monk.com/update?domain=SUBDOMAIN&token=YOUR_TOKEN
 
 Hostname:
-  SUBDOMAIN.dyn.devops-monk.com
+  SUBDOMAIN.ddns.devops-monk.com
 
 Username / Password:
   Leave both blank (authentication is handled by the token in the URL)`,

@@ -7,7 +7,7 @@ const TERMINAL_LINES = [
   { prompt: '$ ', text: 'curl https://api.devops-monk.com/update?domain=homelab&token=abc123', delay: 40 },
   { prompt: '', text: '{"success":true,"ip":"98.42.117.5","changed":true}', delay: 20 },
   { prompt: '', text: '', delay: 0 },
-  { prompt: '$ ', text: 'dig +short homelab.dyn.devops-monk.com', delay: 50 },
+  { prompt: '$ ', text: 'dig +short homelab.ddns.devops-monk.com', delay: 50 },
   { prompt: '', text: '98.42.117.5', delay: 30 },
 ];
 
@@ -215,7 +215,7 @@ export default function LandingPage() {
               {
                 num: '1',
                 title: 'Create a Subdomain',
-                desc: 'Sign up and pick a name like homelab.dyn.devops-monk.com',
+                desc: 'Sign up and pick a name like homelab.ddns.devops-monk.com',
               },
               {
                 num: '2',

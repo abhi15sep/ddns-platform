@@ -17,11 +17,11 @@ async function fireWebhook(url: string, domain: string, oldIP: string, newIP: st
 
   if (isDiscord) {
     body = JSON.stringify({
-      content: `**DDNS Update** — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
+      content: `**DDNS Update** — \`${domain}.ddns.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
     });
   } else if (isSlack) {
     body = JSON.stringify({
-      text: `*DDNS Update* — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
+      text: `*DDNS Update* — \`${domain}.ddns.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
     });
   } else if (isTelegram) {
     // Extract chat_id from query string: https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<ID>
@@ -39,7 +39,7 @@ async function fireWebhook(url: string, domain: string, oldIP: string, newIP: st
     fetchUrl = parsed.toString();
     body = JSON.stringify({
       chat_id: chatId,
-      text: `*DDNS Update* — \`${domain}.dyn.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
+      text: `*DDNS Update* — \`${domain}.ddns.devops-monk.com\`\nIP changed: \`${oldIP}\` → \`${newIP}\`\nTime: ${timestamp}`,
       parse_mode: 'Markdown',
     });
   } else {

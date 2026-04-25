@@ -4,7 +4,7 @@ A self-hosted Dynamic DNS platform with a web dashboard, SSO login, full DNS con
 
 **Domain**: `devops-monk.com` (Porkbun)
 **VPS**: Hostinger VPS
-**DDNS Zone**: `dyn.devops-monk.com` — user subdomains like `myhome.dyn.devops-monk.com`
+**DDNS Zone**: `ddns.devops-monk.com` — user subdomains like `myhome.ddns.devops-monk.com`
 
 ---
 
@@ -26,7 +26,7 @@ A self-hosted Dynamic DNS platform with a web dashboard, SSO login, full DNS con
 
 ## What This Does
 
-Your home internet IP changes frequently. This platform lets you (and your users) register subdomains like `myhome.dyn.devops-monk.com` that always point to their current IP. A small script or the desktop app pings the server every few minutes to keep the DNS record updated.
+Your home internet IP changes frequently. This platform lets you (and your users) register subdomains like `myhome.ddns.devops-monk.com` that always point to their current IP. A small script or the desktop app pings the server every few minutes to keep the DNS record updated.
 
 **Features**:
 - Web dashboard to manage domains, view IP history, copy update URLs
@@ -140,7 +140,7 @@ ddns-platform/
 │
 ├── dns/                     # PowerDNS SQL schemas + Nginx config
 │   ├── schema.sql           # MySQL tables for PowerDNS
-│   ├── init-zone.sql        # Creates dyn.devops-monk.com zone
+│   ├── init-zone.sql        # Creates ddns.devops-monk.com zone
 │   └── nginx-ddns.conf      # Nginx server blocks for DDNS
 │
 ├── db/migrations/           # PostgreSQL migration files (run in order)
@@ -197,7 +197,7 @@ NODE_ENV=development
 DATABASE_URL=postgresql://ddnsuser:password@localhost:5432/ddns
 PDNS_API_URL=http://127.0.0.1:8081/api/v1
 PDNS_API_KEY=dev-api-key-change-in-production
-DDNS_ZONE=dyn.devops-monk.com
+DDNS_ZONE=ddns.devops-monk.com
 JWT_SECRET=dev-jwt-secret-change-in-production-min-16-chars
 APP_URL=http://localhost:5173
 API_URL=http://localhost:3001
@@ -378,7 +378,7 @@ systemctl restart pdns
 systemctl enable pdns
 ```
 
-Verify: `dig @127.0.0.1 dyn.devops-monk.com SOA`
+Verify: `dig @127.0.0.1 ddns.devops-monk.com SOA`
 
 ### Step 8: Configure and build the app
 
@@ -395,7 +395,7 @@ NODE_ENV=production
 DATABASE_URL=postgresql://ddnsuser@127.0.0.1:PORT/ddns
 PDNS_API_URL=http://127.0.0.1:8081/api/v1
 PDNS_API_KEY=YOUR_POWERDNS_API_KEY
-DDNS_ZONE=dyn.devops-monk.com
+DDNS_ZONE=ddns.devops-monk.com
 JWT_SECRET=RUN_openssl_rand_-hex_32_AND_PASTE_HERE
 APP_URL=https://ddns.devops-monk.com
 API_URL=https://api.devops-monk.com
@@ -469,7 +469,7 @@ ufw allow 53/udp
 ```bash
 curl https://api.devops-monk.com/health
 curl -I https://ddns.devops-monk.com
-dig @127.0.0.1 dyn.devops-monk.com SOA
+dig @127.0.0.1 ddns.devops-monk.com SOA
 pm2 status
 ```
 
@@ -535,34 +535,53 @@ chmod +x /etc/cron.daily/ddns-backup
 
 ## Step-by-Step: Porkbun DNS Delegation
 
-This tells the internet that your VPS handles DNS for `dyn.devops-monk.com` and serves the dashboard/API.
+This tells the internet that your VPS handles DNS for everything under `ddns.devops-monk.com` — both the dashboard itself and all user subdomains like `homelab.ddns.devops-monk.com`.
+
+**Key insight**: instead of a CNAME for `ddns`, we use an NS delegation pointing to our own PowerDNS. PowerDNS then serves both the apex A record (dashboard) and all user subdomain records from within the same zone.
 
 ### Step 1: Add DNS records in Porkbun
 
 Log in to [porkbun.com](https://porkbun.com) → Domain Management → `devops-monk.com` → DNS.
 
-Add these four records:
+Add these three records:
 
-| Type  | Host   | Answer                | TTL | Notes                                         |
-|-------|--------|-----------------------|-----|-----------------------------------------------|
-| CNAME | `ddns` | `YOUR_VPS_HOSTNAME`   | 600 | Serves the dashboard                          |
-| CNAME | `api`  | `YOUR_VPS_HOSTNAME`   | 600 | Serves the backend API                        |
-| A     | `ns1`  | `YOUR_VPS_IPv4`       | 600 | Must be A record — NS targets can't be CNAMEs |
-| NS    | `dyn`  | `ns1.devops-monk.com` | 600 | Delegates `*.dyn.devops-monk.com` to your VPS |
+| Type | Host   | Answer                | TTL | Notes                                              |
+|------|--------|-----------------------|-----|----------------------------------------------------|
+| NS   | `ddns` | `ns1.devops-monk.com` | 600 | Delegates all of `ddns.devops-monk.com` to your VPS |
+| A    | `ns1`  | `YOUR_VPS_IPv4`       | 600 | Must be A record — NS targets can't be CNAMEs      |
+| CNAME | `api` | `YOUR_VPS_HOSTNAME`   | 600 | Serves the backend API                             |
+
+> **Do NOT add a CNAME for `ddns`** — you cannot have both a CNAME and NS on the same label. The NS record handles it all.
 
 Run `curl -4 ifconfig.me` on the VPS to get `YOUR_VPS_IPv4`.
 Your `YOUR_VPS_HOSTNAME` is the Hostinger hostname (e.g. `srv870470.hstgr.cloud`).
 
-### Step 2: Verify propagation
+### Step 2: Add the apex A record in PowerDNS
+
+Once PowerDNS is authoritative for `ddns.devops-monk.com`, add an A record so the dashboard resolves:
 
 ```bash
-dig ddns.devops-monk.com
-dig api.devops-monk.com
-dig ns1.devops-monk.com
-dig dyn.devops-monk.com NS   # should return ns1.devops-monk.com
+# On the VPS — adds ddns.devops-monk.com → VPS IP so nginx can serve the dashboard
+mysql -u pdns -p powerdns -e "
+  SET @did = (SELECT id FROM domains WHERE name='ddns.devops-monk.com');
+  INSERT INTO records (domain_id, name, type, content, ttl)
+  VALUES (@did, 'ddns.devops-monk.com', 'A', 'YOUR_VPS_IPv4', 300);
+"
 ```
 
-### Step 3: Run Certbot (after DNS propagates)
+Or use `init-zone.sql` (already includes this record) when setting up for the first time.
+
+### Step 3: Verify propagation
+
+```bash
+dig ddns.devops-monk.com          # should return your VPS IP (dashboard)
+dig api.devops-monk.com           # should return your VPS IP (API)
+dig ns1.devops-monk.com           # should return your VPS IP
+dig ddns.devops-monk.com NS       # should return ns1.devops-monk.com
+dig homelab.ddns.devops-monk.com  # should return the user's home IP (once registered)
+```
+
+### Step 4: Run Certbot (after DNS propagates)
 
 ```bash
 certbot --nginx -d ddns.devops-monk.com -d api.devops-monk.com
@@ -659,7 +678,7 @@ cd /opt/ddns-platform/dashboard && npm run build
 ### DNS not resolving from the internet
 
 ```bash
-dig @YOUR_VPS_IP dyn.devops-monk.com SOA
+dig @YOUR_VPS_IP ddns.devops-monk.com SOA
 # If that works but public DNS doesn't, NS delegation hasn't propagated
 # Check firewall: ufw status (port 53 tcp/udp should be ALLOW)
 # Also check your VPS provider's network-level firewall for port 53
@@ -711,9 +730,9 @@ systemctl restart pdns
 ### DNS resolves directly but not publicly
 
 1. Check `ns1` is an **A record**, not a CNAME
-2. Check NS delegation: `dig dyn.devops-monk.com NS`
+2. Check NS delegation: `dig ddns.devops-monk.com NS`
 3. Check your VPS provider's firewall allows port 53 TCP+UDP
-4. Try a different resolver: `dig @1.1.1.1 homelab.dyn.devops-monk.com A`
+4. Try a different resolver: `dig @1.1.1.1 homelab.ddns.devops-monk.com A`
 
 ### Google OAuth "redirect_uri_mismatch"
 

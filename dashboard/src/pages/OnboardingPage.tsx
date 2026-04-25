@@ -200,13 +200,13 @@ export default function OnboardingPage() {
                 }}
               />
               <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                .dyn.devops-monk.com
+                .ddns.devops-monk.com
               </span>
             </div>
 
             {subdomain.trim() && (
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                Your domain will be: <strong style={{ color: 'var(--accent-text)' }}>{subdomain.trim()}.dyn.devops-monk.com</strong>
+                Your domain will be: <strong style={{ color: 'var(--accent-text)' }}>{subdomain.trim()}.ddns.devops-monk.com</strong>
               </p>
             )}
 
@@ -247,7 +247,7 @@ export default function OnboardingPage() {
                 Domain
               </label>
               <div style={{ ...codeBlockStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>{subdomain}.dyn.devops-monk.com</span>
+                <span>{subdomain}.ddns.devops-monk.com</span>
               </div>
             </div>
 
@@ -361,7 +361,7 @@ export default function OnboardingPage() {
               </div>
               <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '0.5rem' }}>You're All Set!</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                Your domain <strong style={{ color: 'var(--accent-text)' }}>{subdomain}.dyn.devops-monk.com</strong> is ready.
+                Your domain <strong style={{ color: 'var(--accent-text)' }}>{subdomain}.ddns.devops-monk.com</strong> is ready.
                 Once your update script runs, it will automatically keep your DNS pointing to your current IP.
               </p>
 

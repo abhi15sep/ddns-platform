@@ -41,7 +41,7 @@ dashboard/
 
 ### DomainList (Main Dashboard)
 - Header with user email and logout button
-- "Add Domain" section: input for subdomain + `.dyn.devops-monk.com` suffix
+- "Add Domain" section: input for subdomain + `.ddns.devops-monk.com` suffix
 - Domain table columns: Domain (linked), Current IP, Last Updated, Actions (Delete)
 - Empty state when no domains exist
 - Confirmation dialog before deletion
@@ -104,6 +104,6 @@ Output goes to `dashboard/dist/`. Serve with Nginx (or any static file server). 
 ## Customization
 
 - **Branding**: Update `<title>` in `index.html` and headings in components
-- **Domain suffix**: Replace `.dyn.devops-monk.com` in `DomainList.tsx` and `DomainDetail.tsx`
+- **Domain suffix**: Replace `.ddns.devops-monk.com` in `DomainList.tsx` and `DomainDetail.tsx`
 - **Colors**: Edit CSS variables in `styles/global.css` (primary: `#4f46e5`)
 - **Additional SSO**: Add new `<a href="/auth/{provider}">` buttons in `LoginPage.tsx`

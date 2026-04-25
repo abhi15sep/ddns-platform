@@ -194,7 +194,7 @@ export default function DomainDetail() {
 
         {/* Header */}
         <div className="detail-header">
-          <span className="detail-title">{subdomain}.dyn.devops-monk.com</span>
+          <span className="detail-title">{subdomain}.ddns.devops-monk.com</span>
           <span className={`badge ${badgeClass}`}>
             <span className={`status-dot ${dotClass}`} />
             {statusLabel(status)}

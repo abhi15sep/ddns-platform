@@ -90,7 +90,7 @@ Stores DNS zones and records. Managed entirely by PowerDNS.
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | INT (PK) | Auto-increment |
-| `name` | VARCHAR(255) | Zone name (e.g., `dyn.devops-monk.com`) |
+| `name` | VARCHAR(255) | Zone name (e.g., `ddns.devops-monk.com`) |
 | `type` | VARCHAR(8) | Zone type: `NATIVE`, `MASTER`, `SLAVE` |
 
 #### `records` (PowerDNS)
@@ -98,7 +98,7 @@ Stores DNS zones and records. Managed entirely by PowerDNS.
 |--------|------|-------------|
 | `id` | BIGINT (PK) | Auto-increment |
 | `domain_id` | INT (FK → domains) | Zone this record belongs to |
-| `name` | VARCHAR(255) | FQDN (e.g., `myhome.dyn.devops-monk.com`) |
+| `name` | VARCHAR(255) | FQDN (e.g., `myhome.ddns.devops-monk.com`) |
 | `type` | VARCHAR(10) | Record type: `A`, `AAAA`, `SOA`, `NS` |
 | `content` | VARCHAR(65535) | Record value (IP address, nameserver, etc.) |
 | `ttl` | INT | Time to live in seconds (60 for DDNS records) |

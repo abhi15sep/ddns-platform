@@ -74,7 +74,7 @@ export default function StatusPage() {
     try {
       const start = Date.now();
       const res = await fetch(
-        'https://cloudflare-dns.com/dns-query?name=dyn.devops-monk.com&type=SOA',
+        'https://cloudflare-dns.com/dns-query?name=ddns.devops-monk.com&type=SOA',
         { headers: { Accept: 'application/dns-json' }, signal: AbortSignal.timeout(10000) }
       );
       const elapsed = Date.now() - start;
@@ -338,7 +338,7 @@ export default function StatusPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
           <div className="info-card">
             <h3>DNS Zone</h3>
-            <div className="info-value" style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>dyn.devops-monk.com</div>
+            <div className="info-value" style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>ddns.devops-monk.com</div>
           </div>
           <div className="info-card">
             <h3>API Endpoint</h3>
